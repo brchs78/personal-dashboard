@@ -1,0 +1,22 @@
+{
+    "name": "ole-os",
+    "version": "1.0.0",
+    "description": "Oles persönlicher KI-Assistent",
+    "main": "./out/main/index.js",
+    "author": "Ole",
+    "scripts": {
+        "dev": "electron-vite dev",
+        "build": "electron-vite build",
+        "start": "electron-vite preview"
+    },
+    "devDependencies": {
+        "@vitejs/plugin-react": "^4.2.1",
+        "electron": "^28.3.3",
+        "electron-vite": "^1.0.27",
+        "vite": "^4.5.3"
+    },
+    "dependencies": {
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1"
+    }
+}

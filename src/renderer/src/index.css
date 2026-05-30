@@ -1,0 +1,56 @@
+:root {
+    --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+    --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+
+    --color-background-primary: #1c1c1f;
+    --color-background-secondary: #252529;
+    --color-text-primary: #ededf0;
+    --color-text-secondary: #9a9aa2;
+    --color-text-tertiary: #65656d;
+    --color-border-primary: #3a3a40;
+    --color-border-secondary: #2e2e34;
+    --color-border-tertiary: #252529;
+
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: #161618;
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+}
+
+/* Obere Leiste zum Fenster-Verschieben (macOS) */
+.titlebar {
+    height: 28px;
+    -webkit-app-region: drag;
+}
+
+#root {
+    padding: 0 16px 20px;
+}
+
+input,
+textarea,
+button,
+select {
+    -webkit-app-region: no-drag;
+    user-select: text;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #3a3a40;
+    border-radius: 4px;
+}
