@@ -17,16 +17,7 @@ const SP = { acc: "#c026d3", bg: "rgba(192,38,211,0.10)", br: "rgba(192,38,211,0
 const UN = { acc: "#6366f1", bg: "rgba(99,102,241,0.10)", br: "rgba(99,102,241,0.25)" };
 const BD = { acc: "#a855f7", bg: "rgba(168,85,247,0.10)", br: "rgba(168,85,247,0.25)" };
 const KL = { acc: "#818cf8", bg: "rgba(129,140,248,0.10)", br: "rgba(129,140,248,0.25)" };
-const GBL = "#312e81";
 
-function getZone(hr, maxHR) {
-    const pct = hr / maxHR;
-    if (pct < 0.6) return { z: 1, name: "Zone 1", color: "#818cf8", desc: "Aktive Erholung" };
-    if (pct < 0.7) return { z: 2, name: "Zone 2", color: "#6366f1", desc: "Aerob / Fettverbrennung" };
-    if (pct < 0.8) return { z: 3, name: "Zone 3", color: "#8b5cf6", desc: "Aerob-Anaerob Mix" };
-    if (pct < 0.9) return { z: 4, name: "Zone 4", color: "#a855f7", desc: "Threshold" };
-    return { z: 5, name: "Zone 5", color: "#c026d3", desc: "VO2max / Maximal" };
-}
 function calcRecovery(restHR, sleepHrs, stress) {
     const hr = Math.max(0, Math.min(10, (80 - Math.max(40, Math.min(80, restHR))) / 40 * 10));
     const sl = Math.max(0, Math.min(10, (sleepHrs - 4) / 5 * 10));
@@ -67,7 +58,6 @@ Antworte auf Deutsch. Direkt wie ein Elite-Coach.`;
 
 const WG = [40, 0, 55, 40, 0, 80, 30];
 const DL = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-const FEELINGS = ["😴", "😕", "😐", "😊", "🔥"];
 const SLEEP_QUAL = ["😴", "😕", "😐", "😊", "💎"];
 const STRESS_LVL = ["😌", "🙂", "😐", "😓", "🤯"];
 
@@ -117,13 +107,6 @@ export default function App() {
     const [todoCat, setTodoCat] = useState("Sport");
 
     const [weekRuns, setWeekRuns] = useState({});
-    const [upBusy, setUpBusy] = useState(false);
-    const [upMsg, setUpMsg] = useState("");
-    const [nutrition, setNutrition] = useState(null);
-    const [nutBusy, setNutBusy] = useState(false);
-    const [dur, setDur] = useState(""); const [dist, setDist] = useState("");
-    const [wHR, setWHR] = useState(""); const [feel, setFeel] = useState(null);
-    const [wNote, setWNote] = useState(""); const [wAna, setWAna] = useState(null); const [wBusy, setWBusy] = useState(false);
 
     const [exams, setExams] = useState(DEF_EXAMS);
     const [grades, setGrades] = useState([]);
@@ -150,7 +133,6 @@ export default function App() {
     const [wgInput, setWgInput] = useState("");
     const [rstHR, setRstHR] = useState(""); const [rstStress, setRstStress] = useState(null);
     const [maxHR, setMaxHR] = useState(197);
-    const [tPlan, setTPlan] = useState(null); const [tPlanBusy, setTPlanBusy] = useState(false);
     const [weekReview, setWeekReview] = useState(null); const [wrBusy, setWrBusy] = useState(false);
     const [flashcards, setFlashcards] = useState({}); const [fcBusy, setFcBusy] = useState(false);
     const [fcNoteId, setFcNoteId] = useState(null);
@@ -188,7 +170,7 @@ export default function App() {
         localStorage.setItem("ole:api-key", apiKey.trim());
         setKeySet(!!apiKey.trim());
         setShowSettings(false);
-        if (apiKey.trim()) { genPlan(); loadNutrition(); }
+        if (apiKey.trim()) { genPlan(); }
     }
 
     async function loadAll() {
@@ -198,13 +180,12 @@ export default function App() {
             const rs = await Promise.allSettled(ks.map(k => store.get(k)));
             const g = (i) => { try { return rs[i].value ? JSON.parse(rs[i].value.value) : null; } catch { return null; } };
             const p = g(0); if (p && p.day === new Date().toDateString()) { setPlan(p.p); setPlanBusy(false); } else genPlan();
-            if (g(1)) setTodos(g(1)); if (g(2)) setWeekRuns(g(2)); if (g(3)) setWAna(g(3));
+            if (g(1)) setTodos(g(1)); if (g(2)) setWeekRuns(g(2));
             if (g(4)) setExams(g(4)); if (g(5)) setGrades(g(5)); if (g(6)) setUNotes(g(6));
             if (g(7)) setSleepLog(g(7)); if (g(8)) setWeightLog(g(8)); if (g(9)) setRecoveryLog(g(9));
-            if (g(10)) setTPlan(g(10)); if (g(11)) setFlashcards(g(11) || {}); if (g(12)) setStudyPlans(g(12) || {});
+            if (g(11)) setFlashcards(g(11) || {}); if (g(12)) setStudyPlans(g(12) || {});
             if (g(13)) setMaxHR(g(13));
         } catch { genPlan(); }
-        loadNutrition();
     }
     async function save(k, v) { try { await store.set(k, JSON.stringify(v)); } catch { } }
 
@@ -225,51 +206,6 @@ export default function App() {
             setPlan({ summary: "Lernen + leichte Bewegung.", warn: "Post-OP: kein erhöhter Blutdruck.", blocks: [{ time: "08:00", type: "uni", title: tc[0]?.name || "Lernzeit", note: null }, { time: "14:30", type: "sport", title: "Zone 2 Lauf 40 min", note: "Puls unter 155" }] });
         }
         setPlanBusy(false);
-    }
-
-    async function loadNutrition() {
-        if (!getKey()) return;
-        const key = `ole:nut-${new Date().toDateString()}`;
-        try { const c = await store.get(key); if (c) { setNutrition(JSON.parse(c.value)); return; } } catch { }
-        setNutBusy(true);
-        const day = new Date().getDay(), mi = day === 0 ? 6 : day - 1, isTd = WG[mi] > 0;
-        try {
-            const raw = await callAI([{ role: "user", content: `Ole 72kg Marathon Zone-2. Heute: ${isTd ? `Trainingstag (${WG[mi]} min)` : "Ruhetag"}.\nJSON only:\n{"calories":number,"protein_g":number,"carbs_g":number,"fat_g":number,"is_training":${isTd},"focus":"1 Satz","tip":"1 Tipp"}` }], 300);
-            const n = JSON.parse(raw.replace(/```json|```/g, "").trim()); setNutrition(n); save(key, n);
-        } catch {
-            setNutrition(isTd ? { calories: 2900, protein_g: 140, carbs_g: 360, fat_g: 80, is_training: true, focus: "Kohlenhydrate vorladen.", tip: "Haferflocken 2h vor dem Run." } : { calories: 2400, protein_g: 130, carbs_g: 260, fat_g: 80, is_training: false, focus: "Regeneration.", tip: "Protein alle 3-4h." });
-        }
-        setNutBusy(false);
-    }
-
-    async function handleUpload(e) {
-        const file = e.target.files[0]; if (!file) return;
-        if (!getKey()) { setUpMsg("API Key nötig (Zahnrad oben)."); setTimeout(() => setUpMsg(""), 4000); return; }
-        setUpBusy(true); setUpMsg("Wird analysiert...");
-        try {
-            const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
-            const rsp = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": getKey(), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 150, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: file.type || "image/png", data: b64 } }, { type: "text", text: "Apple Health workout screenshot. Extract date (YYYY-MM-DD) and duration in minutes. JSON only: {\"date\":\"YYYY-MM-DD\",\"duration_min\":number} or {\"error\":\"not found\"}" }] }] }) });
-            const rd = await rsp.json();
-            const txt = rd.content.filter(b => b.type === "text").map(b => b.text).join("");
-            const result = JSON.parse(txt.replace(/```json|```/g, "").trim());
-            if (result.error) { setUpMsg("Kein Workout gefunden."); }
-            else { const up = { ...weekRuns, [result.date]: result.duration_min }; setWeekRuns(up); save("ole:week-runs", up); setUpMsg(`✓ ${result.date}: ${result.duration_min} min`); }
-        } catch { setUpMsg("Fehler. Nochmal versuchen."); }
-        setUpBusy(false); setTimeout(() => setUpMsg(""), 4000); e.target.value = "";
-    }
-
-    async function analyzeRun() {
-        if (!dur && !dist) return;
-        setWBusy(true); setWAna(null);
-        const td = dk(new Date()), durN = parseInt(dur) || 0;
-        if (durN > 0) { const up = { ...weekRuns, [td]: durN }; setWeekRuns(up); save("ole:week-runs", up); }
-        const fl = feel !== null ? `${FEELINGS[feel]} (${feel + 1}/5)` : "–";
-        const ds = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
-        try {
-            const raw = await callAI([{ role: "user", content: `Analysiere Oles Lauf. JSON only:\n{"verdict":"Sehr gut|Gut|Ok|Ausbaufähig","badge":"max 4 Wörter","summary":"2 Sätze","phase_fit":"1 Satz","recovery":"1 Satz","tip":"1 Tipp"}\n\nLaufen, ${ds}, ${dur || "–"} min, ${dist || "–"} km, Ø ${wHR || "–"} bpm, Gefühl: ${fl}${wNote ? `, ${wNote}` : ""}` }], 500);
-            const a = JSON.parse(raw.replace(/```json|```/g, "").trim()); setWAna(a); save("ole:w-ana", a);
-        } catch { setWAna({ verdict: "Gespeichert", badge: "erfasst", summary: "Lauf gespeichert.", phase_fit: "–", recovery: "–", tip: "–" }); }
-        setWBusy(false);
     }
 
     async function genNote() {
@@ -314,16 +250,6 @@ export default function App() {
         setRecoveryLog(log); save("ole:recovery-log", log);
         setRstHR(""); setRstStress(null);
     }
-    async function genTrainingPlan() {
-        if (!getKey()) return;
-        setTPlanBusy(true);
-        try {
-            const raw = await callAI([{ role: "user", content: `Erstelle Oles Marathon-Trainingsplan für die nächsten 4 Wochen (${dTo("2026-10-11")} Tage bis München 11.10.2026). Wochenstruktur: Mo:40, Mi:55, Do:40, Sa:80, So:30 min. Zone-2 Fokus. Post-OP: Zone 1-2.\nJSON only:\n{"phase":"string","weeks":[{"week":1,"theme":"string","sessions":[{"day":"Mo|Di|Mi|Do|Fr|Sa|So","type":"string","minutes":number,"zone":"Z1|Z2|Z3|Tempo|Ruhe","note":"string"}]}]}` }], 1200);
-            const p = JSON.parse(raw.replace(/```json|```/g, "").trim());
-            setTPlan(p); save("ole:t-plan", p);
-        } catch { }
-        setTPlanBusy(false);
-    }
     async function genWeekReview() {
         if (!getKey()) return;
         setWrBusy(true);
@@ -364,20 +290,11 @@ export default function App() {
 
     const today = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
     const dLeft = dTo("2026-10-11"), wLeft = Math.floor(dLeft / 7);
-    const canRun = (dur || dist) && !wBusy;
-    const vClr = v => !v ? "var(--color-text-secondary)" : v.includes("Sehr") ? "#2ecc71" : v.includes("Gut") ? SP.acc : v.includes("Aus") ? "#c026d3" : "var(--color-text-secondary)";
-    const weekDts = getWeekDates(), actuals = weekDts.map(d => weekRuns[dk(d)] || 0);
-    const totGoal = WG.reduce((s, v) => s + v, 0), totAct = actuals.reduce((s, v) => s + v, 0);
-    const maxBar = Math.max(...WG, ...actuals, 10);
+    const weekDts = getWeekDates();
     const tdKey = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][new Date().getDay()];
     const tEcts = grades.reduce((s, g) => s + parseInt(g.ects || 0), 0);
     const ns = grades.length ? (grades.reduce((s, g) => s + parseFloat(g.grade || 0) * parseInt(g.ects || 0), 0) / tEcts).toFixed(2) : null;
     const pR = 54, pC = 2 * Math.PI * pR, pTot = pomBreak ? 5 * 60 : 25 * 60, pOff = pC * (1 - (pTot - pomSecs) / pTot);
-    const nutTot = nutrition ? nutrition.protein_g * 4 + nutrition.carbs_g * 4 + nutrition.fat_g * 9 : 1;
-    const pPct = nutrition ? Math.round(nutrition.protein_g * 4 / nutTot * 100) : 21;
-    const cPct = nutrition ? Math.round(nutrition.carbs_g * 4 / nutTot * 100) : 53;
-    const fPct = 100 - pPct - cPct;
-    const SW = 440, SH = 170, ML = 36, MT = 14, MR = 8, MB = 28, cW = SW - ML - MR, cH = SH - MT - MB, gW = cW / 7, bW = Math.min(16, gW * 0.27), bGap = 4, sY = cH / maxBar;
 
     return (
         <div style={{
@@ -433,141 +350,6 @@ export default function App() {
 
             {/* ── TRAINING PLAN ── */}
             {tab === "plan" && <TrainingPlan />}
-
-            {/* ── WORKOUT ── */}
-            {tab === "workout" && (
-                <div>
-                    <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem", marginBottom: "1.25rem" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                            <div><p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 2px" }}>Wochenvolumen</p><p style={{ fontSize: 12, margin: 0 }}><span style={{ color: SP.acc, fontWeight: 700 }}>{totAct} min</span><span style={{ color: "var(--color-text-tertiary)" }}> / {totGoal} min</span></p></div>
-                            <label style={{ cursor: "pointer" }}><input type="file" accept="image/*" onChange={handleUpload} style={{ position: "absolute", opacity: 0, width: 0, height: 0 }} /><div style={{ fontSize: 11, fontWeight: 600, padding: "5px 12px", borderRadius: 20, background: SP.bg, color: SP.acc, border: `0.5px solid ${SP.br}`, cursor: "pointer", whiteSpace: "nowrap" }}>{upBusy ? "..." : "📷 Screenshot"}</div></label>
-                        </div>
-                        {upMsg && <p style={{ fontSize: 11, color: upMsg.startsWith("✓") ? "#2ecc71" : "#ff7675", margin: "0 0 6px", fontWeight: 500 }}>{upMsg}</p>}
-                        <svg width="100%" viewBox={`0 0 ${SW} ${SH}`} style={{ overflow: "visible" }}>
-                            {[0, 0.5, 1].map((f, i) => { const v = Math.round(maxBar * f), y = MT + cH - v * sY; return (<g key={i}><line x1={ML} y1={y} x2={SW - MR} y2={y} stroke="rgba(128,128,128,0.1)" strokeWidth="1" strokeDasharray="3 3" /><text x={ML - 4} y={y + 4} textAnchor="end" fontSize="10" fill="rgba(128,128,128,0.45)">{v}</text></g>); })}
-                            {DL.map((day, i) => {
-                                const isT = weekDts[i].toDateString() === new Date().toDateString(); const cx = ML + i * gW + gW / 2, gX = cx - bW - bGap / 2, aX = cx + bGap / 2, goal = WG[i], actual = actuals[i], gH = goal * sY, aH = actual * sY, bY = MT + cH; return (
-                                    <g key={day}>
-                                        {goal > 0 && <rect x={gX} y={bY - gH} width={bW} height={gH} rx="3" fill={GBL} fillOpacity={isT ? 1 : 0.6} stroke="#6366f1" strokeWidth="0.5" />}
-                                        {actual > 0 && <rect x={aX} y={bY - aH} width={bW} height={aH} rx="3" fill={SP.acc} fillOpacity={isT ? 1 : 0.75} />}
-                                        {goal === 0 && <line x1={cx - 8} y1={bY - 1} x2={cx + 8} y2={bY - 1} stroke="rgba(128,128,128,0.2)" strokeWidth="2" strokeLinecap="round" />}
-                                        <text x={cx} y={SH - 5} textAnchor="middle" fontSize="11" fill={isT ? SP.acc : "rgba(128,128,128,0.55)"} fontWeight={isT ? "700" : "400"}>{day}</text>
-                                        {isT && <circle cx={cx} cy={SH - 20} r="2.5" fill={SP.acc} />}
-                                    </g>
-                                );
-                            })}
-                            <line x1={ML} y1={MT + cH} x2={SW - MR} y2={MT + cH} stroke="rgba(128,128,128,0.15)" strokeWidth="1" />
-                        </svg>
-                        <div style={{ display: "flex", gap: 14, justifyContent: "flex-end", marginTop: 4 }}>
-                            {[[GBL, "Ziel"], [SP.acc, "Aktuell"]].map(([c, l]) => (<div key={l} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--color-text-tertiary)" }}><div style={{ width: 10, height: 10, borderRadius: 2, background: c }} />{l}</div>))}
-                        </div>
-                    </div>
-
-                    <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem", marginBottom: "1.25rem" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                            <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Ernährung heute</p>
-                            {nutrition && <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: nutrition.is_training ? SP.bg : "rgba(128,128,128,0.08)", color: nutrition.is_training ? SP.acc : "var(--color-text-tertiary)", border: `0.5px solid ${nutrition.is_training ? SP.br : "rgba(128,128,128,0.15)"}` }}>{nutrition.is_training ? "Trainingstag" : "Ruhetag"}</span>}
-                        </div>
-                        {nutBusy ? <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: 0 }}>KI berechnet Makros...</p> : nutrition ? (
-                            <div>
-                                <p style={{ fontSize: 28, fontWeight: 800, margin: "0 0 10px", letterSpacing: "-1px", ...gTxt("#c026d3", "#6366f1") }}>{nutrition.calories}<span style={{ fontSize: 14, fontWeight: 600, letterSpacing: 0 }}> kcal</span></p>
-                                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                                    {[{ l: "Protein", v: nutrition.protein_g, c: "#c026d3", bg: "rgba(192,38,211,0.1)" }, { l: "Carbs", v: nutrition.carbs_g, c: "#6366f1", bg: "rgba(99,102,241,0.1)" }, { l: "Fett", v: nutrition.fat_g, c: "#a855f7", bg: "rgba(168,85,247,0.1)" }].map(m => (<div key={m.l} style={{ flex: 1, padding: "8px 10px", borderRadius: "var(--border-radius-md)", background: m.bg, textAlign: "center" }}><p style={{ fontSize: 18, fontWeight: 800, margin: 0, color: m.c, fontVariantNumeric: "tabular-nums" }}>{m.v}<span style={{ fontSize: 11, fontWeight: 600 }}>g</span></p><p style={{ fontSize: 10, color: "var(--color-text-tertiary)", margin: "2px 0 0", fontWeight: 600, textTransform: "uppercase" }}>{m.l}</p></div>))}
-                                </div>
-                                <div style={{ display: "flex", height: 5, borderRadius: 3, overflow: "hidden", marginBottom: 10 }}><div style={{ width: `${pPct}%`, background: "#c026d3" }} /><div style={{ width: `${cPct}%`, background: "#6366f1" }} /><div style={{ width: `${fPct}%`, background: "#a855f7" }} /></div>
-                                <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 3px", lineHeight: 1.5 }}>{nutrition.focus}</p>
-                                <p style={{ fontSize: 12, color: "var(--color-text-tertiary)", margin: 0, lineHeight: 1.5, fontStyle: "italic" }}>💡 {nutrition.tip}</p>
-                            </div>
-                        ) : <p style={{ fontSize: 13, color: "var(--color-text-tertiary)", margin: 0 }}>API Key eintragen für Makro-Empfehlungen.</p>}
-                    </div>
-
-                    <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem" }}>
-                        <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 14px" }}>🏃 Lauf erfassen</p>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                            <div><p style={LBL}>Dauer <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>min</span></p><input type="number" value={dur} onChange={e => setDur(e.target.value)} placeholder="52" style={BINP} /></div>
-                            <div><p style={LBL}>Distanz <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>km</span></p><input type="number" value={dist} onChange={e => setDist(e.target.value)} placeholder="9.8" style={BINP} /></div>
-                        </div>
-                        <div style={{ marginBottom: 16 }}>
-                            <p style={LBL}>Ø Herzfrequenz <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>bpm</span></p>
-                            <input type="number" value={wHR} onChange={e => setWHR(e.target.value)} placeholder="148" style={BINP} />
-                            {wHR && (() => { const z = getZone(parseInt(wHR), maxHR); return (
-                                <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: "var(--border-radius-md)", background: `${z.color}15`, border: `0.5px solid ${z.color}40`, display: "flex", alignItems: "center", gap: 10 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 800, color: z.color }}>{z.name}</span>
-                                    <span style={{ fontSize: 11, color: "var(--color-text-secondary)", flex: 1 }}>{z.desc}</span>
-                                    <span style={{ fontSize: 10, color: "var(--color-text-tertiary)" }}>{Math.round(parseInt(wHR) / maxHR * 100)}% von {maxHR}</span>
-                                </div>
-                            ); })()}
-                        </div>
-                        <p style={LBL}>Wie war's?</p>
-                        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>{FEELINGS.map((em, i) => <button key={i} onClick={() => setFeel(feel === i ? null : i)} style={{ flex: 1, fontSize: 26, padding: "10px 0", borderRadius: "var(--border-radius-md)", cursor: "pointer", lineHeight: 1, background: feel === i ? SP.bg : "var(--color-background-secondary)", border: feel === i ? `0.5px solid ${SP.acc}` : "0.5px solid transparent" }}>{em}</button>)}</div>
-                        <div style={{ marginBottom: 16 }}><p style={LBL}>Notiz <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>optional</span></p><textarea value={wNote} onChange={e => setWNote(e.target.value)} placeholder="Beine schwer, Schlaf 7h..." style={{ ...INP, minHeight: 56, resize: "none", lineHeight: 1.5 }} /></div>
-                        <button onClick={analyzeRun} disabled={!canRun} style={{ width: "100%", padding: "14px", fontSize: 15, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: canRun ? "pointer" : "default", border: "none", background: canRun ? "linear-gradient(135deg,#6366f1,#c026d3)" : "var(--color-background-secondary)", color: canRun ? "#ffffff" : "var(--color-text-tertiary)" }}>{wBusy ? "Claude analysiert..." : "Lauf analysieren →"}</button>
-                        {wAna && (
-                            <div style={{ marginTop: 16, padding: "1rem", borderRadius: "var(--border-radius-lg)", background: "var(--color-background-secondary)", border: `0.5px solid ${SP.br}` }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}><p style={{ fontSize: 17, fontWeight: 700, margin: 0, color: vClr(wAna.verdict) }}>{wAna.verdict}</p><span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: SP.bg, color: SP.acc, border: `0.5px solid ${SP.br}` }}>{wAna.badge}</span></div>
-                                <p style={{ fontSize: 13, lineHeight: 1.65, margin: "0 0 10px", color: "var(--color-text-secondary)" }}>{wAna.summary}</p>
-                                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{[["Phase", wAna.phase_fit], ["Erholung", wAna.recovery], ["Tipp", wAna.tip]].map(([l, v]) => { if (!v || v === "–") return null; return <div key={l} style={{ background: "var(--color-background-primary)", borderRadius: "var(--border-radius-md)", padding: "8px 12px", display: "flex", gap: 8, alignItems: "flex-start" }}><span style={{ fontSize: 10, fontWeight: 700, color: SP.acc, textTransform: "uppercase", letterSpacing: "0.08em", flexShrink: 0, marginTop: 2 }}>{l}</span><span style={{ fontSize: 13, color: "var(--color-text-primary)", lineHeight: 1.5 }}>{v}</span></div>; })}</div>
-                                <button onClick={() => { setWAna(null); setDur(""); setDist(""); setWHR(""); setFeel(null); setWNote(""); }} style={{ fontSize: 12, color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 10 }}>Neuen Lauf erfassen →</button>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* ── TRAININGSPLAN ── */}
-                    <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem", marginTop: "1.25rem" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                            <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>📋 Trainingsplan</p>
-                            <button onClick={genTrainingPlan} disabled={tPlanBusy || !keySet} style={{ fontSize: 11, fontWeight: 600, padding: "5px 12px", borderRadius: 20, background: keySet ? SP.bg : "var(--color-background-secondary)", color: keySet ? SP.acc : "var(--color-text-tertiary)", border: `0.5px solid ${keySet ? SP.br : "transparent"}`, cursor: keySet ? "pointer" : "default" }}>{tPlanBusy ? "..." : tPlan ? "↺ Neu generieren" : "✨ KI-Plan erstellen"}</button>
-                        </div>
-                        {!tPlan && (
-                            <div>
-                                <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "0 0 10px" }}>Aktuelle Standard-Wochenstruktur:</p>
-                                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                    {DL.map((day, i) => {
-                                        const min = WG[i]; const isRest = min === 0;
-                                        const isLong = min >= 80; const zoneName = isRest ? "Ruhe" : isLong ? "Zone 2 Long" : "Zone 2";
-                                        const zoneClr = isRest ? "#999" : isLong ? "#6366f1" : "#818cf8";
-                                        return (
-                                            <div key={day} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 12px", borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)" }}>
-                                                <span style={{ fontSize: 12, fontWeight: 700, color: SP.acc, minWidth: 24 }}>{day}</span>
-                                                <span style={{ flex: 1, fontSize: 13, color: isRest ? "var(--color-text-tertiary)" : "var(--color-text-primary)" }}>{isRest ? "Ruhetag" : `${min} min ${zoneName}`}</span>
-                                                {!isRest && <span style={{ fontSize: 10, fontWeight: 700, color: zoneClr, padding: "1px 7px", borderRadius: 10, border: `0.5px solid ${zoneClr}40` }}>{zoneName}</span>}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                {!keySet && <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: "10px 0 0", fontStyle: "italic" }}>Mit API Key generiert die KI einen personalisierten 4-Wochen-Plan.</p>}
-                            </div>
-                        )}
-                        {tPlan && (
-                            <div>
-                                <p style={{ fontSize: 12, fontWeight: 700, color: SP.acc, margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.08em" }}>{tPlan.phase || "Trainingsphase"}</p>
-                                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                                    {tPlan.weeks && tPlan.weeks.map((w, wi) => (
-                                        <div key={wi} style={{ padding: "10px 12px", borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)", border: `0.5px solid ${SP.br}` }}>
-                                            <p style={{ fontSize: 12, fontWeight: 700, margin: "0 0 6px", color: SP.acc }}>Woche {w.week}: {w.theme}</p>
-                                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                                                {w.sessions && w.sessions.map((s, si) => (
-                                                    <div key={si} style={{ display: "flex", gap: 8, fontSize: 12, color: "var(--color-text-secondary)" }}>
-                                                        <span style={{ fontWeight: 700, color: SP.acc, minWidth: 22 }}>{s.day}</span>
-                                                        <span style={{ flex: 1 }}>{s.type} · {s.minutes} min</span>
-                                                        <span style={{ fontSize: 10, color: "var(--color-text-tertiary)" }}>{s.zone}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* ── STRAVA (Platzhalter) ── */}
-                    <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem", marginTop: "1.25rem" }}>
-                        <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 6px" }}>🔗 Strava-Verbindung</p>
-                        <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.5 }}>Automatischer Import deiner Aktivitäten. Strava-Anbindung benötigt OAuth-Setup (eigene App auf strava.com/settings/api). Kommt in nächster Iteration.</p>
-                    </div>
-                </div>
-            )}
 
             {/* ── BODY ── */}
             {tab === "body" && (
