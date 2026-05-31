@@ -2,14 +2,14 @@
     --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
     --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
 
-    --color-background-primary: #1c1c1f;
-    --color-background-secondary: #252529;
-    --color-text-primary: #ededf0;
-    --color-text-secondary: #9a9aa2;
-    --color-text-tertiary: #65656d;
-    --color-border-primary: #3a3a40;
-    --color-border-secondary: #2e2e34;
-    --color-border-tertiary: #252529;
+    --color-background-primary: #0a0d1a;
+    --color-background-secondary: #11142a;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: rgba(255,255,255,0.60);
+    --color-text-tertiary: rgba(255,255,255,0.40);
+    --color-border-primary: rgba(199,26,211,0.20);
+    --color-border-secondary: rgba(255,255,255,0.10);
+    --color-border-tertiary: rgba(255,255,255,0.06);
 
     --border-radius-md: 8px;
     --border-radius-lg: 12px;
@@ -22,7 +22,7 @@
 body {
     margin: 0;
     font-family: var(--font-sans);
-    background: #161618;
+    background: #0a0d1a;
     color: var(--color-text-primary);
     -webkit-font-smoothing: antialiased;
     user-select: none;
@@ -35,7 +35,7 @@ body {
 }
 
 #root {
-    padding: 0 16px 20px;
+    padding: 0;
 }
 
 input,
@@ -51,6 +51,6 @@ select {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #3a3a40;
+    background: rgba(255,255,255,0.10);
     border-radius: 4px;
 }

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, globalShortcut, Tray, Menu,
     nativeImage, Notification, ipcMain } = require('electron')
 const path = require('path')
+const healthIPC = require('./health-ipc.js')
 
 let mainWindow = null
 let tray = null
@@ -47,7 +48,7 @@ function createWindow() {
 }
 
 function registerHotkey() {
-    globalShortcut.register('CommandOrControl+Shift+Space', () => {
+    globalShortcut.register('Alt+Space', () => {
         if (!mainWindow || mainWindow.isDestroyed()) { showWindow(); return }
         if (mainWindow.isVisible() && mainWindow.isFocused()) mainWindow.hide()
         else { mainWindow.show(); mainWindow.focus() }
@@ -102,6 +103,7 @@ app.on('before-quit', () => { isQuitting = true })
 
 app.whenReady().then(() => {
     createWindow(); registerHotkey(); createTray(); startScheduler()
+    healthIPC.init(() => mainWindow)
     app.on('activate', () => showWindow())
 })
 app.on('will-quit', () => globalShortcut.unregisterAll())

@@ -18,11 +18,11 @@
 // COLORS
 // ──────────────────────────────────────────────────────────────────
 const colors = {
-  // Page-Backgrounds (Layered Navy)
+  // Page-Backgrounds (Layered Deep Navy)
   bg: {
-    base: "#0a0f1e",        // sehr dunkles Navy — Page-Background
-    elevated: "#0f1629",    // leicht angehoben — Sidebar, Header-Bar
-    sunken: "#060912",      // tiefer — Backdrop unter Modals
+    base: "#0a0d1a",        // sehr dunkles Navy — Page-Background
+    elevated: "#11142a",    // leicht angehoben — Sidebar, Header-Bar
+    sunken: "#05070f",      // tiefer — Backdrop unter Modals
   },
 
   // Glassmorphism-Surfaces (auf bg.base)
@@ -33,15 +33,20 @@ const colors = {
     glassStrong: "rgba(255,255,255,0.12)",   // Modal, Floating Toolbar
   },
 
-  // Accent — Gold
+  // Accent — Magenta (Primary) + Indigo (Secondary)
   accent: {
-    DEFAULT: "#c9a84c",                       // Primary Gold
-    hover: "#d8b85c",                         // Hover etwas heller
-    pressed: "#b89640",                       // Pressed etwas dunkler
-    soft: "rgba(201,168,76,0.12)",            // Background-Tint (Selected Tab)
-    softer: "rgba(201,168,76,0.06)",          // Sehr dezent (Hover-Tint)
-    border: "rgba(201,168,76,0.30)",          // Border für Gold-Karten
-    glow: "rgba(201,168,76,0.40)",            // Shadow-Glow
+    DEFAULT: "#c026d3",                       // Primary Magenta
+    hover: "#d33ee5",                         // Hover etwas heller
+    pressed: "#a31bb2",                       // Pressed etwas dunkler
+    soft: "rgba(192,38,211,0.12)",            // Background-Tint
+    softer: "rgba(192,38,211,0.06)",          // Sehr dezent (Hover-Tint)
+    border: "rgba(199,26,211,0.20)",          // Border für Accent-Karten
+    glow: "rgba(192,38,211,0.40)",            // Shadow-Glow
+    secondary: "#6366f1",                     // Secondary Indigo
+    secondaryHover: "#7c7ff3",
+    secondarySoft: "rgba(99,102,241,0.12)",
+    gradient: "linear-gradient(135deg,#c026d3,#6366f1)",        // Magenta → Indigo
+    gradientSoft: "linear-gradient(135deg,rgba(192,38,211,0.12),rgba(99,102,241,0.12))",
   },
 
   // Text
@@ -50,7 +55,7 @@ const colors = {
     secondary: "rgba(255,255,255,0.60)",      // Body, Sublabels
     tertiary: "rgba(255,255,255,0.40)",       // Captions, Metadata
     disabled: "rgba(255,255,255,0.25)",       // Disabled
-    inverse: "#0a0f1e",                       // Text auf Gold-CTA
+    inverse: "#0a0d1a",                       // Text auf Accent-CTA
   },
 
   // Borders
@@ -69,13 +74,12 @@ const colors = {
     info: "#60a5fa",
   },
 
-  // Tab-Akzente (Workout/Body/Uni/Kalender)
-  // Bewusst an Navy-Gold-Theme angepasst — dezenter als die alte SP/UN/BD/KL-Palette
+  // Tab-Akzente (Workout/Body/Uni/Kalender) — Magenta-Indigo Spektrum
   tab: {
-    workout: "#e8a974",     // Warm Coral (statt #fda085)
-    body: "#7dd3a1",        // Sage Green (statt #00b894)
-    uni: "#b794e6",         // Soft Purple (statt #c471f5)
-    calendar: "#7eb6d6",    // Sky Blue (statt #74b9ff)
+    workout: "#c026d3",     // Magenta
+    body: "#a855f7",        // Violet
+    uni: "#6366f1",         // Indigo
+    calendar: "#818cf8",    // Light Indigo
   },
 };
 
@@ -111,8 +115,8 @@ const shadow = {
   cardHover: "0 12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)",
   elevated: "0 16px 48px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.08)",
   modal: "0 24px 64px rgba(0,0,0,0.60), inset 0 1px 0 rgba(255,255,255,0.10)",
-  glow: "0 0 20px rgba(201,168,76,0.25)",        // Gold-Glow (CTA)
-  glowStrong: "0 0 32px rgba(201,168,76,0.40)",  // Gold-Glow (Hover/Active CTA)
+  glow: "0 0 20px rgba(192,38,211,0.25)",        // Magenta-Glow (CTA)
+  glowStrong: "0 0 32px rgba(192,38,211,0.40)",  // Magenta-Glow (Hover/Active CTA)
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -298,14 +302,15 @@ const tokens = {
   zIndex,
 };
 
-module.exports = tokens;
-module.exports.colors = colors;
-module.exports.radius = radius;
-module.exports.blur = blur;
-module.exports.shadow = shadow;
-module.exports.spacing = spacing;
-module.exports.typography = typography;
-module.exports.motion = motion;
-module.exports.glass = glass;
-module.exports.zIndex = zIndex;
-module.exports.default = tokens;
+export {
+  colors,
+  radius,
+  blur,
+  shadow,
+  spacing,
+  typography,
+  motion,
+  glass,
+  zIndex,
+};
+export default tokens;

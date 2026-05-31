@@ -1,4 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import Sidebar from "./components/Sidebar";
+import Dashboard from "./components/Dashboard";
+import Health from "./components/Health";
+import tokens from "./styles/tokens";
 
 // ── Speicher-Adapter: nutzt window.storage (Claude) oder localStorage (Electron) ──
 const store = (typeof window !== "undefined" && window.storage) ? window.storage : {
@@ -7,20 +11,20 @@ const store = (typeof window !== "undefined" && window.storage) ? window.storage
 };
 const getKey = () => (typeof localStorage !== "undefined" ? localStorage.getItem("ole:api-key") || "" : "");
 
-// ── Colors ──
-const SP = { acc: "#fda085", bg: "rgba(253,160,133,0.10)", br: "rgba(253,160,133,0.25)" };
-const UN = { acc: "#c471f5", bg: "rgba(196,113,245,0.10)", br: "rgba(196,113,245,0.25)" };
-const BD = { acc: "#00b894", bg: "rgba(0,184,148,0.10)", br: "rgba(0,184,148,0.25)" };
-const KL = { acc: "#74b9ff", bg: "rgba(116,185,255,0.10)", br: "rgba(116,185,255,0.25)" };
-const GBL = "#1d3461";
+// ── Colors ── (Magenta-Indigo Palette)
+const SP = { acc: "#c026d3", bg: "rgba(192,38,211,0.10)", br: "rgba(192,38,211,0.25)" };
+const UN = { acc: "#6366f1", bg: "rgba(99,102,241,0.10)", br: "rgba(99,102,241,0.25)" };
+const BD = { acc: "#a855f7", bg: "rgba(168,85,247,0.10)", br: "rgba(168,85,247,0.25)" };
+const KL = { acc: "#818cf8", bg: "rgba(129,140,248,0.10)", br: "rgba(129,140,248,0.25)" };
+const GBL = "#312e81";
 
 function getZone(hr, maxHR) {
     const pct = hr / maxHR;
-    if (pct < 0.6) return { z: 1, name: "Zone 1", color: "#74b9ff", desc: "Aktive Erholung" };
-    if (pct < 0.7) return { z: 2, name: "Zone 2", color: "#00b894", desc: "Aerob / Fettverbrennung" };
-    if (pct < 0.8) return { z: 3, name: "Zone 3", color: "#ffd200", desc: "Aerob-Anaerob Mix" };
-    if (pct < 0.9) return { z: 4, name: "Zone 4", color: "#f7971e", desc: "Threshold" };
-    return { z: 5, name: "Zone 5", color: "#d63031", desc: "VO2max / Maximal" };
+    if (pct < 0.6) return { z: 1, name: "Zone 1", color: "#818cf8", desc: "Aktive Erholung" };
+    if (pct < 0.7) return { z: 2, name: "Zone 2", color: "#6366f1", desc: "Aerob / Fettverbrennung" };
+    if (pct < 0.8) return { z: 3, name: "Zone 3", color: "#8b5cf6", desc: "Aerob-Anaerob Mix" };
+    if (pct < 0.9) return { z: 4, name: "Zone 4", color: "#a855f7", desc: "Threshold" };
+    return { z: 5, name: "Zone 5", color: "#c026d3", desc: "VO2max / Maximal" };
 }
 function calcRecovery(restHR, sleepHrs, stress) {
     const hr = Math.max(0, Math.min(10, (80 - Math.max(40, Math.min(80, restHR))) / 40 * 10));
@@ -359,7 +363,7 @@ export default function App() {
     const today = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
     const dLeft = dTo("2026-10-11"), wLeft = Math.floor(dLeft / 7);
     const canRun = (dur || dist) && !wBusy;
-    const vClr = v => !v ? "var(--color-text-secondary)" : v.includes("Sehr") ? "#2ecc71" : v.includes("Gut") ? SP.acc : v.includes("Aus") ? "#f7971e" : "var(--color-text-secondary)";
+    const vClr = v => !v ? "var(--color-text-secondary)" : v.includes("Sehr") ? "#2ecc71" : v.includes("Gut") ? SP.acc : v.includes("Aus") ? "#c026d3" : "var(--color-text-secondary)";
     const weekDts = getWeekDates(), actuals = weekDts.map(d => weekRuns[dk(d)] || 0);
     const totGoal = WG.reduce((s, v) => s + v, 0), totAct = actuals.reduce((s, v) => s + v, 0);
     const maxBar = Math.max(...WG, ...actuals, 10);
@@ -374,29 +378,25 @@ export default function App() {
     const SW = 440, SH = 170, ML = 36, MT = 14, MR = 8, MB = 28, cW = SW - ML - MR, cH = SH - MT - MB, gW = cW / 7, bW = Math.min(16, gW * 0.27), bGap = 4, sY = cH / maxBar;
 
     return (
-        <div style={{ fontFamily: "var(--font-sans)", color: "var(--color-text-primary)" }}>
-            <div className="titlebar" />
-
-            {/* HEADER */}
-            <div style={{ paddingBottom: "0.75rem", marginBottom: "1rem", borderBottom: "0.5px solid var(--color-border-tertiary)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-                    <div>
-                        <p style={{ fontSize: 21, fontWeight: 800, margin: "0 0 2px", letterSpacing: "-0.8px", ...gTxt("#f7971e", "#ffd200") }}>OLE OS</p>
-                        <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0 }}>{today}</p>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, background: "rgba(247,151,30,0.1)", color: "#f7971e", padding: "4px 12px", borderRadius: 20, border: "0.5px solid rgba(247,151,30,0.25)", textAlign: "center" }}>
-                            <span style={{ fontVariantNumeric: "tabular-nums" }}>{dLeft}</span>d Marathon
-                        </div>
-                        <button onClick={() => setShowSettings(true)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: keySet ? "var(--color-text-tertiary)" : "#f7971e", padding: 2 }}>⚙</button>
-                    </div>
-                </div>
-                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                    {[["dash", "Dashboard", "#f7971e"], ["workout", "Workout", SP.acc], ["body", "Body", BD.acc], ["uni", "Uni", UN.acc], ["kalender", "Kalender", KL.acc], ["coach", "Coach", "#a29bfe"]].map(([k, l, c]) => (
-                        <button key={k} onClick={() => setTab(k)} style={{ fontSize: 12, padding: "5px 12px", borderRadius: "var(--border-radius-md)", cursor: "pointer", background: tab === k ? `${c}20` : "transparent", border: tab === k ? `0.5px solid ${c}` : "0.5px solid transparent", fontWeight: tab === k ? 700 : 400, color: tab === k ? c : "var(--color-text-secondary)" }}>{l}</button>
-                    ))}
-                </div>
-            </div>
+        <div style={{
+            fontFamily: "var(--font-sans)",
+            color: "var(--color-text-primary)",
+            background: tokens.colors.bg.base,
+            minHeight: "100vh",
+            display: "flex",
+        }}>
+            <Sidebar
+                activeTab={tab}
+                onTabChange={(id) => id === "settings" ? setShowSettings(true) : setTab(id)}
+            />
+            <main style={{
+                flex: 1,
+                minWidth: 0,
+                maxHeight: "100vh",
+                overflowY: "auto",
+                padding: "0 16px 20px",
+            }}>
+                <div className="titlebar" />
 
             {/* SETTINGS OVERLAY */}
             {showSettings && (
@@ -409,7 +409,7 @@ export default function App() {
                         <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>Für die Puls-Zonen-Berechnung. Faustregel: 220 − Alter.</p>
                         <input type="number" value={maxHR} onChange={e => setMaxHR(parseInt(e.target.value) || 197)} onBlur={() => save("ole:max-hr", maxHR)} style={{ ...INP, marginBottom: 12 }} />
                         <div style={{ display: "flex", gap: 8 }}>
-                            <button onClick={saveKey} style={{ flex: 1, padding: "10px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontWeight: 700, fontSize: 13, border: "none", background: "linear-gradient(135deg,#f7971e,#ffd200)", color: "#2d1200" }}>Speichern</button>
+                            <button onClick={saveKey} style={{ flex: 1, padding: "10px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontWeight: 700, fontSize: 13, border: "none", background: "linear-gradient(135deg,#c026d3,#6366f1)", color: "#ffffff" }}>Speichern</button>
                             <button onClick={() => setShowSettings(false)} style={{ padding: "10px 16px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontSize: 13, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-secondary)" }}>Abbrechen</button>
                         </div>
                     </div>
@@ -418,94 +418,16 @@ export default function App() {
 
             {/* API KEY BANNER */}
             {!keySet && (
-                <div onClick={() => setShowSettings(true)} style={{ cursor: "pointer", fontSize: 12, background: "rgba(247,151,30,0.1)", color: "#f7971e", padding: "10px 13px", borderRadius: "var(--border-radius-md)", marginBottom: 16, border: "0.5px solid rgba(247,151,30,0.25)", lineHeight: 1.5 }}>
+                <div onClick={() => setShowSettings(true)} style={{ cursor: "pointer", fontSize: 12, background: "rgba(192,38,211,0.1)", color: "#c026d3", padding: "10px 13px", borderRadius: "var(--border-radius-md)", marginBottom: 16, border: "0.5px solid rgba(192,38,211,0.25)", lineHeight: 1.5 }}>
                     ⚙ KI-Features sind noch aus. Tippe hier um deinen API Key einzutragen.
                 </div>
             )}
 
             {/* ── DASHBOARD ── */}
-            {tab === "dash" && (
-                <div>
-                    <div style={{ borderRadius: "var(--border-radius-lg)", padding: "1.25rem 1.375rem", marginBottom: "1.25rem", background: "linear-gradient(135deg,rgba(247,151,30,0.08),rgba(255,210,0,0.03))", border: "0.5px solid rgba(247,151,30,0.2)" }}>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: "#f7971e", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>München Marathon · 11.10.2026</p>
-                        <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-                            <p style={{ fontSize: 54, fontWeight: 800, margin: 0, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-3px", ...gTxt("#f7971e", "#ffd200") }}>{dLeft}</p>
-                            <div><p style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Tage</p><p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "2px 0 0" }}>{wLeft} Wochen · Sub 2:59h</p></div>
-                        </div>
-                    </div>
+            {tab === "dash" && <Dashboard />}
 
-                    <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem", marginBottom: "1.25rem" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                            <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Tagesplan</p>
-                            <button onClick={genPlan} style={{ fontSize: 12, color: "var(--color-text-secondary)", background: "none", border: "none", cursor: "pointer", padding: 0, opacity: planBusy ? 0.4 : 1 }}>↺ Neu</button>
-                        </div>
-                        {planBusy ? <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: 0 }}>{getKey() ? "KI erstellt deinen Plan..." : "API Key eintragen um Plan zu generieren."}</p> : plan && (
-                            <div>
-                                {plan.warn && <div style={{ fontSize: 12, background: "rgba(255,78,80,0.08)", color: "#ff7675", padding: "7px 11px", borderRadius: "var(--border-radius-md)", marginBottom: 10, border: "0.5px solid rgba(255,78,80,0.2)" }}>{plan.warn}</div>}
-                                <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 10px", lineHeight: 1.5 }}>{plan.summary}</p>
-                                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                                    {plan.blocks && plan.blocks.map((b, i) => {
-                                        const c = blockClr(b.type); return (
-                                            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "9px 12px", borderRadius: "var(--border-radius-md)", background: c.bg, border: `0.5px solid ${c.br}` }}>
-                                                <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 700, color: c.acc, flexShrink: 0, marginTop: 1, minWidth: 38 }}>{b.time}</span>
-                                                <div style={{ flex: 1 }}><p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>{b.title}</p>{b.note && <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: "2px 0 0" }}>{b.note}</p>}</div>
-                                                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 20, border: `0.5px solid ${c.br}`, color: c.acc, flexShrink: 0 }}>{b.type === "sport" ? "Sport" : b.type === "uni" ? "Uni" : "–"}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem" }}>
-                        <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 12px" }}>To-Do</p>
-                        <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
-                            {["Sport", "Uni", "Sonstiges"].map(cat => (<button key={cat} onClick={() => setTodoCat(cat)} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, cursor: "pointer", background: todoCat === cat ? (cat === "Sport" ? SP.bg : cat === "Uni" ? UN.bg : "rgba(162,155,254,0.1)") : "var(--color-background-secondary)", border: todoCat === cat ? `0.5px solid ${cat === "Sport" ? SP.acc : cat === "Uni" ? UN.acc : "#a29bfe"}` : "0.5px solid transparent", color: todoCat === cat ? (cat === "Sport" ? SP.acc : cat === "Uni" ? UN.acc : "#a29bfe") : "var(--color-text-secondary)", fontWeight: todoCat === cat ? 700 : 400 }}>{cat}</button>))}
-                        </div>
-                        <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-                            <input value={todoTxt} onChange={e => setTodoTxt(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && todoTxt.trim()) { const t = { id: Date.now(), text: todoTxt, category: todoCat, done: false }; const up = [t, ...todos]; setTodos(up); save("ole:todos", up); setTodoTxt(""); } }} placeholder="Aufgabe hinzufügen..." style={{ ...INP, flex: 1, fontSize: 13 }} />
-                            <button onClick={() => { if (!todoTxt.trim()) return; const t = { id: Date.now(), text: todoTxt, category: todoCat, done: false }; const up = [t, ...todos]; setTodos(up); save("ole:todos", up); setTodoTxt(""); }} style={{ padding: "8px 16px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontWeight: 700, fontSize: 15, flexShrink: 0, background: todoTxt.trim() ? "linear-gradient(135deg,#f7971e,#ffd200)" : "var(--color-background-secondary)", color: todoTxt.trim() ? "#2d1200" : "var(--color-text-tertiary)", border: "none" }}>+</button>
-                        </div>
-                        {todos.length === 0 ? <p style={{ fontSize: 13, color: "var(--color-text-tertiary)", margin: 0 }}>Noch keine Aufgaben.</p> : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                                {todos.map(t => {
-                                    const cc = t.category === "Sport" ? SP.acc : t.category === "Uni" ? UN.acc : "#a29bfe"; return (
-                                        <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)", opacity: t.done ? 0.5 : 1 }}>
-                                            <button onClick={() => { const up = todos.map(x => x.id === t.id ? { ...x, done: !x.done } : x); setTodos(up); save("ole:todos", up); }} style={{ width: 18, height: 18, borderRadius: 9, flexShrink: 0, cursor: "pointer", background: t.done ? cc : "transparent", border: `1.5px solid ${cc}`, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>{t.done && <span style={{ fontSize: 10, color: "#fff", lineHeight: 1 }}>✓</span>}</button>
-                                            <span style={{ flex: 1, fontSize: 13, textDecoration: t.done ? "line-through" : "none", color: t.done ? "var(--color-text-tertiary)" : "var(--color-text-primary)" }}>{t.text}</span>
-                                            <span style={{ fontSize: 10, fontWeight: 700, color: cc, padding: "1px 6px", borderRadius: 10, border: `0.5px solid ${cc}`, flexShrink: 0 }}>{t.category}</span>
-                                            <button onClick={() => { const up = todos.filter(x => x.id !== t.id); setTodos(up); save("ole:todos", up); }} style={{ fontSize: 16, background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)", padding: "2px", flexShrink: 0 }}>×</button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* ── WOCHENRÜCKBLICK ── */}
-                    <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem", marginTop: "1.25rem" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                            <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Wochenrückblick</p>
-                            <button onClick={genWeekReview} disabled={wrBusy || !keySet} style={{ fontSize: 12, color: keySet ? "#f7971e" : "var(--color-text-tertiary)", background: "none", border: "none", cursor: keySet ? "pointer" : "default", padding: 0, opacity: wrBusy ? 0.4 : 1 }}>{wrBusy ? "..." : "↺ KI-Analyse"}</button>
-                        </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
-                            {[
-                                { l: "Volumen", v: `${totAct}/${totGoal}`, u: "min", c: SP.acc, bg: SP.bg },
-                                { l: "Schlaf Ø", v: sleepLog.slice(0, 7).length ? (sleepLog.slice(0, 7).reduce((s, e) => s + e.hours, 0) / sleepLog.slice(0, 7).length).toFixed(1) : "–", u: "h", c: BD.acc, bg: BD.bg },
-                                { l: "Recovery", v: recoveryLog[0]?.score ?? "–", u: "/10", c: "#74b9ff", bg: "rgba(116,185,255,0.1)" },
-                            ].map(m => (
-                                <div key={m.l} style={{ padding: "10px 12px", borderRadius: "var(--border-radius-md)", background: m.bg, textAlign: "center" }}>
-                                    <p style={{ fontSize: 18, fontWeight: 800, margin: 0, color: m.c, fontVariantNumeric: "tabular-nums" }}>{m.v}<span style={{ fontSize: 10, fontWeight: 600 }}> {m.u}</span></p>
-                                    <p style={{ fontSize: 10, color: "var(--color-text-tertiary)", margin: "2px 0 0", fontWeight: 600, textTransform: "uppercase" }}>{m.l}</p>
-                                </div>
-                            ))}
-                        </div>
-                        {weekReview && <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{weekReview}</p>}
-                        {!weekReview && !keySet && <p style={{ fontSize: 12, color: "var(--color-text-tertiary)", margin: 0, fontStyle: "italic" }}>Stats werden automatisch berechnet. Für KI-Insights API Key eintragen.</p>}
-                    </div>
-                </div>
-            )}
+            {/* ── HEALTH ── */}
+            {tab === "health" && <Health />}
 
             {/* ── WORKOUT ── */}
             {tab === "workout" && (
@@ -521,7 +443,7 @@ export default function App() {
                             {DL.map((day, i) => {
                                 const isT = weekDts[i].toDateString() === new Date().toDateString(); const cx = ML + i * gW + gW / 2, gX = cx - bW - bGap / 2, aX = cx + bGap / 2, goal = WG[i], actual = actuals[i], gH = goal * sY, aH = actual * sY, bY = MT + cH; return (
                                     <g key={day}>
-                                        {goal > 0 && <rect x={gX} y={bY - gH} width={bW} height={gH} rx="3" fill={GBL} fillOpacity={isT ? 1 : 0.6} stroke="#2d5a9e" strokeWidth="0.5" />}
+                                        {goal > 0 && <rect x={gX} y={bY - gH} width={bW} height={gH} rx="3" fill={GBL} fillOpacity={isT ? 1 : 0.6} stroke="#6366f1" strokeWidth="0.5" />}
                                         {actual > 0 && <rect x={aX} y={bY - aH} width={bW} height={aH} rx="3" fill={SP.acc} fillOpacity={isT ? 1 : 0.75} />}
                                         {goal === 0 && <line x1={cx - 8} y1={bY - 1} x2={cx + 8} y2={bY - 1} stroke="rgba(128,128,128,0.2)" strokeWidth="2" strokeLinecap="round" />}
                                         <text x={cx} y={SH - 5} textAnchor="middle" fontSize="11" fill={isT ? SP.acc : "rgba(128,128,128,0.55)"} fontWeight={isT ? "700" : "400"}>{day}</text>
@@ -543,11 +465,11 @@ export default function App() {
                         </div>
                         {nutBusy ? <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: 0 }}>KI berechnet Makros...</p> : nutrition ? (
                             <div>
-                                <p style={{ fontSize: 28, fontWeight: 800, margin: "0 0 10px", letterSpacing: "-1px", ...gTxt("#f7971e", "#ffd200") }}>{nutrition.calories}<span style={{ fontSize: 14, fontWeight: 600, letterSpacing: 0 }}> kcal</span></p>
+                                <p style={{ fontSize: 28, fontWeight: 800, margin: "0 0 10px", letterSpacing: "-1px", ...gTxt("#c026d3", "#6366f1") }}>{nutrition.calories}<span style={{ fontSize: 14, fontWeight: 600, letterSpacing: 0 }}> kcal</span></p>
                                 <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                                    {[{ l: "Protein", v: nutrition.protein_g, c: "#fda085", bg: "rgba(253,160,133,0.1)" }, { l: "Carbs", v: nutrition.carbs_g, c: "#ffd200", bg: "rgba(255,210,0,0.1)" }, { l: "Fett", v: nutrition.fat_g, c: "#e17055", bg: "rgba(225,112,85,0.1)" }].map(m => (<div key={m.l} style={{ flex: 1, padding: "8px 10px", borderRadius: "var(--border-radius-md)", background: m.bg, textAlign: "center" }}><p style={{ fontSize: 18, fontWeight: 800, margin: 0, color: m.c, fontVariantNumeric: "tabular-nums" }}>{m.v}<span style={{ fontSize: 11, fontWeight: 600 }}>g</span></p><p style={{ fontSize: 10, color: "var(--color-text-tertiary)", margin: "2px 0 0", fontWeight: 600, textTransform: "uppercase" }}>{m.l}</p></div>))}
+                                    {[{ l: "Protein", v: nutrition.protein_g, c: "#c026d3", bg: "rgba(192,38,211,0.1)" }, { l: "Carbs", v: nutrition.carbs_g, c: "#6366f1", bg: "rgba(99,102,241,0.1)" }, { l: "Fett", v: nutrition.fat_g, c: "#a855f7", bg: "rgba(168,85,247,0.1)" }].map(m => (<div key={m.l} style={{ flex: 1, padding: "8px 10px", borderRadius: "var(--border-radius-md)", background: m.bg, textAlign: "center" }}><p style={{ fontSize: 18, fontWeight: 800, margin: 0, color: m.c, fontVariantNumeric: "tabular-nums" }}>{m.v}<span style={{ fontSize: 11, fontWeight: 600 }}>g</span></p><p style={{ fontSize: 10, color: "var(--color-text-tertiary)", margin: "2px 0 0", fontWeight: 600, textTransform: "uppercase" }}>{m.l}</p></div>))}
                                 </div>
-                                <div style={{ display: "flex", height: 5, borderRadius: 3, overflow: "hidden", marginBottom: 10 }}><div style={{ width: `${pPct}%`, background: "#fda085" }} /><div style={{ width: `${cPct}%`, background: "#ffd200" }} /><div style={{ width: `${fPct}%`, background: "#e17055" }} /></div>
+                                <div style={{ display: "flex", height: 5, borderRadius: 3, overflow: "hidden", marginBottom: 10 }}><div style={{ width: `${pPct}%`, background: "#c026d3" }} /><div style={{ width: `${cPct}%`, background: "#6366f1" }} /><div style={{ width: `${fPct}%`, background: "#a855f7" }} /></div>
                                 <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 3px", lineHeight: 1.5 }}>{nutrition.focus}</p>
                                 <p style={{ fontSize: 12, color: "var(--color-text-tertiary)", margin: 0, lineHeight: 1.5, fontStyle: "italic" }}>💡 {nutrition.tip}</p>
                             </div>
@@ -574,7 +496,7 @@ export default function App() {
                         <p style={LBL}>Wie war's?</p>
                         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>{FEELINGS.map((em, i) => <button key={i} onClick={() => setFeel(feel === i ? null : i)} style={{ flex: 1, fontSize: 26, padding: "10px 0", borderRadius: "var(--border-radius-md)", cursor: "pointer", lineHeight: 1, background: feel === i ? SP.bg : "var(--color-background-secondary)", border: feel === i ? `0.5px solid ${SP.acc}` : "0.5px solid transparent" }}>{em}</button>)}</div>
                         <div style={{ marginBottom: 16 }}><p style={LBL}>Notiz <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>optional</span></p><textarea value={wNote} onChange={e => setWNote(e.target.value)} placeholder="Beine schwer, Schlaf 7h..." style={{ ...INP, minHeight: 56, resize: "none", lineHeight: 1.5 }} /></div>
-                        <button onClick={analyzeRun} disabled={!canRun} style={{ width: "100%", padding: "14px", fontSize: 15, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: canRun ? "pointer" : "default", border: "none", background: canRun ? "linear-gradient(135deg,#f6d365,#fda085)" : "var(--color-background-secondary)", color: canRun ? "#2d1200" : "var(--color-text-tertiary)" }}>{wBusy ? "Claude analysiert..." : "Lauf analysieren →"}</button>
+                        <button onClick={analyzeRun} disabled={!canRun} style={{ width: "100%", padding: "14px", fontSize: 15, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: canRun ? "pointer" : "default", border: "none", background: canRun ? "linear-gradient(135deg,#6366f1,#c026d3)" : "var(--color-background-secondary)", color: canRun ? "#ffffff" : "var(--color-text-tertiary)" }}>{wBusy ? "Claude analysiert..." : "Lauf analysieren →"}</button>
                         {wAna && (
                             <div style={{ marginTop: 16, padding: "1rem", borderRadius: "var(--border-radius-lg)", background: "var(--color-background-secondary)", border: `0.5px solid ${SP.br}` }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}><p style={{ fontSize: 17, fontWeight: 700, margin: 0, color: vClr(wAna.verdict) }}>{wAna.verdict}</p><span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: SP.bg, color: SP.acc, border: `0.5px solid ${SP.br}` }}>{wAna.badge}</span></div>
@@ -598,7 +520,7 @@ export default function App() {
                                     {DL.map((day, i) => {
                                         const min = WG[i]; const isRest = min === 0;
                                         const isLong = min >= 80; const zoneName = isRest ? "Ruhe" : isLong ? "Zone 2 Long" : "Zone 2";
-                                        const zoneClr = isRest ? "#999" : isLong ? "#00b894" : "#74b9ff";
+                                        const zoneClr = isRest ? "#999" : isLong ? "#6366f1" : "#818cf8";
                                         return (
                                             <div key={day} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 12px", borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)" }}>
                                                 <span style={{ fontSize: 12, fontWeight: 700, color: SP.acc, minWidth: 24 }}>{day}</span>
@@ -661,7 +583,7 @@ export default function App() {
                                         const d = weekDts[i]; const ent = sleepLog.find(s => s.date === dk(d));
                                         const hrs = ent?.hours ?? 0; const isT = d.toDateString() === new Date().toDateString();
                                         const cx = 36 + i * (396 / 7) + (396 / 14); const bH = hrs * 16;
-                                        const optimal = hrs >= 7 && hrs <= 9; const clr = optimal ? BD.acc : hrs >= 6 ? "#ffd200" : "#d63031";
+                                        const optimal = hrs >= 7 && hrs <= 9; const clr = optimal ? BD.acc : hrs >= 6 ? "#6366f1" : "#d63031";
                                         return (
                                             <g key={day}>
                                                 {hrs > 0 && <rect x={cx - 12} y={142 - bH} width={24} height={bH} rx="3" fill={clr} fillOpacity={isT ? 1 : 0.6} />}
@@ -683,7 +605,7 @@ export default function App() {
                                 <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                                     {SLEEP_QUAL.map((em, i) => <button key={i} onClick={() => setSleepQ(sleepQ === i ? null : i)} style={{ flex: 1, fontSize: 24, padding: "10px 0", borderRadius: "var(--border-radius-md)", cursor: "pointer", lineHeight: 1, background: sleepQ === i ? BD.bg : "var(--color-background-secondary)", border: sleepQ === i ? `0.5px solid ${BD.acc}` : "0.5px solid transparent" }}>{em}</button>)}
                                 </div>
-                                <button onClick={saveSleep} disabled={!sleepH} style={{ width: "100%", padding: "12px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: sleepH ? "pointer" : "default", border: "none", background: sleepH ? `linear-gradient(135deg,#00b894,#55efc4)` : "var(--color-background-secondary)", color: sleepH ? "#003d2e" : "var(--color-text-tertiary)" }}>Speichern</button>
+                                <button onClick={saveSleep} disabled={!sleepH} style={{ width: "100%", padding: "12px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: sleepH ? "pointer" : "default", border: "none", background: sleepH ? `linear-gradient(135deg,#6366f1,#818cf8)` : "var(--color-background-secondary)", color: sleepH ? "#ffffff" : "var(--color-text-tertiary)" }}>Speichern</button>
                             </div>
                         </div>
                     )}
@@ -701,11 +623,11 @@ export default function App() {
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
                                         <div>
                                             <p style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 4px" }}>Aktuell</p>
-                                            <p style={{ fontSize: 36, fontWeight: 800, margin: 0, letterSpacing: "-1.5px", ...gTxt("#00b894", "#55efc4") }}>{cur ?? "–"}<span style={{ fontSize: 14, fontWeight: 600 }}> kg</span></p>
+                                            <p style={{ fontSize: 36, fontWeight: 800, margin: 0, letterSpacing: "-1.5px", ...gTxt("#6366f1", "#818cf8") }}>{cur ?? "–"}<span style={{ fontSize: 14, fontWeight: 600 }}> kg</span></p>
                                         </div>
                                         {trend !== null && <div style={{ textAlign: "right" }}>
                                             <p style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 4px" }}>Trend 7d</p>
-                                            <p style={{ fontSize: 20, fontWeight: 700, margin: 0, color: parseFloat(trend) > 0 ? "#f7971e" : BD.acc }}>{trend > 0 ? "+" : ""}{trend} kg</p>
+                                            <p style={{ fontSize: 20, fontWeight: 700, margin: 0, color: parseFloat(trend) > 0 ? "#c026d3" : BD.acc }}>{trend > 0 ? "+" : ""}{trend} kg</p>
                                         </div>}
                                     </div>
                                     {sorted.length > 1 && (
@@ -721,7 +643,7 @@ export default function App() {
                                 <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem" }}>
                                     <p style={LBL}>Heutiges Gewicht (kg)</p>
                                     <input type="number" step="0.1" value={wgInput} onChange={e => setWgInput(e.target.value)} placeholder="72.3" style={{ ...BINP, marginBottom: 14 }} />
-                                    <button onClick={saveWeight} disabled={!wgInput} style={{ width: "100%", padding: "12px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: wgInput ? "pointer" : "default", border: "none", background: wgInput ? `linear-gradient(135deg,#00b894,#55efc4)` : "var(--color-background-secondary)", color: wgInput ? "#003d2e" : "var(--color-text-tertiary)" }}>Speichern</button>
+                                    <button onClick={saveWeight} disabled={!wgInput} style={{ width: "100%", padding: "12px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: wgInput ? "pointer" : "default", border: "none", background: wgInput ? `linear-gradient(135deg,#6366f1,#818cf8)` : "var(--color-background-secondary)", color: wgInput ? "#ffffff" : "var(--color-text-tertiary)" }}>Speichern</button>
                                 </div>
                             </div>
                         );
@@ -732,9 +654,9 @@ export default function App() {
                         return (
                             <div>
                                 {today && (
-                                    <div style={{ background: `linear-gradient(135deg,${BD.bg},rgba(116,185,255,0.06))`, border: `0.5px solid ${BD.br}`, borderRadius: "var(--border-radius-lg)", padding: "1.25rem", marginBottom: "1.25rem", textAlign: "center" }}>
+                                    <div style={{ background: `linear-gradient(135deg,${BD.bg},rgba(99,102,241,0.06))`, border: `0.5px solid ${BD.br}`, borderRadius: "var(--border-radius-lg)", padding: "1.25rem", marginBottom: "1.25rem", textAlign: "center" }}>
                                         <p style={{ fontSize: 11, fontWeight: 700, color: BD.acc, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 6px" }}>Recovery Score</p>
-                                        <p style={{ fontSize: 56, fontWeight: 800, margin: 0, letterSpacing: "-2.5px", ...gTxt("#00b894", "#74b9ff") }}>{today.score}<span style={{ fontSize: 16, fontWeight: 600 }}>/10</span></p>
+                                        <p style={{ fontSize: 56, fontWeight: 800, margin: 0, letterSpacing: "-2.5px", ...gTxt("#6366f1", "#818cf8") }}>{today.score}<span style={{ fontSize: 16, fontWeight: 600 }}>/10</span></p>
                                         <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "8px 0 0" }}>Ruhe-HF {today.restHR} bpm · {today.stress !== null ? STRESS_LVL[today.stress] : "–"}</p>
                                     </div>
                                 )}
@@ -748,7 +670,7 @@ export default function App() {
                                     <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                                         {STRESS_LVL.map((em, i) => <button key={i} onClick={() => setRstStress(rstStress === i ? null : i)} style={{ flex: 1, fontSize: 22, padding: "10px 0", borderRadius: "var(--border-radius-md)", cursor: "pointer", lineHeight: 1, background: rstStress === i ? BD.bg : "var(--color-background-secondary)", border: rstStress === i ? `0.5px solid ${BD.acc}` : "0.5px solid transparent" }}>{em}</button>)}
                                     </div>
-                                    <button onClick={saveRecovery} disabled={!rstHR} style={{ width: "100%", padding: "12px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: rstHR ? "pointer" : "default", border: "none", background: rstHR ? `linear-gradient(135deg,#00b894,#55efc4)` : "var(--color-background-secondary)", color: rstHR ? "#003d2e" : "var(--color-text-tertiary)" }}>Recovery berechnen</button>
+                                    <button onClick={saveRecovery} disabled={!rstHR} style={{ width: "100%", padding: "12px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: rstHR ? "pointer" : "default", border: "none", background: rstHR ? `linear-gradient(135deg,#6366f1,#818cf8)` : "var(--color-background-secondary)", color: rstHR ? "#ffffff" : "var(--color-text-tertiary)" }}>Recovery berechnen</button>
                                 </div>
                                 {recoveryLog.length > 1 && (
                                     <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem", marginTop: "1.25rem" }}>
@@ -758,7 +680,7 @@ export default function App() {
                                                 <div key={i} style={{ display: "flex", gap: 8, fontSize: 12, padding: "6px 10px", borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)" }}>
                                                     <span style={{ color: "var(--color-text-tertiary)", minWidth: 80 }}>{r.date}</span>
                                                     <span style={{ flex: 1, color: "var(--color-text-secondary)" }}>{r.restHR} bpm</span>
-                                                    <span style={{ fontWeight: 700, color: r.score >= 7 ? BD.acc : r.score >= 5 ? "#ffd200" : "#d63031" }}>{r.score}/10</span>
+                                                    <span style={{ fontWeight: 700, color: r.score >= 7 ? BD.acc : r.score >= 5 ? "#6366f1" : "#d63031" }}>{r.score}/10</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -777,7 +699,7 @@ export default function App() {
                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                 {[[1, 0, 60, "Aktive Erholung", "Sehr leicht, locker"], [2, 60, 70, "Aerob / Fettverbrennung", "Komfortabel, Unterhaltung möglich"], [3, 70, 80, "Aerob-Anaerob Mix", "Spürbar, kontrolliert anstrengend"], [4, 80, 90, "Threshold", "Hart, kaum sprechen"], [5, 90, 100, "VO2max / Maximal", "Maximal, nur kurze Intervalle"]].map(([z, lo, hi, name, desc]) => {
                                     const loB = Math.round(maxHR * lo / 100); const hiB = Math.round(maxHR * hi / 100);
-                                    const clr = z === 1 ? "#74b9ff" : z === 2 ? "#00b894" : z === 3 ? "#ffd200" : z === 4 ? "#f7971e" : "#d63031";
+                                    const clr = z === 1 ? "#818cf8" : z === 2 ? "#6366f1" : z === 3 ? "#6366f1" : z === 4 ? "#c026d3" : "#d63031";
                                     return (
                                         <div key={z} style={{ padding: "10px 12px", borderRadius: "var(--border-radius-md)", background: `${clr}15`, border: `0.5px solid ${clr}40` }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 2 }}>
@@ -805,9 +727,9 @@ export default function App() {
                         <div>
                             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
                                 {[...exams].sort((a, b) => new Date(a.date) - new Date(b.date)).map(ex => {
-                                    const d = dTo(ex.date), urg = d <= 14, c = urg ? { acc: "#f7971e", br: "rgba(247,151,30,0.3)", bg: "rgba(247,151,30,0.08)" } : UN; return (
+                                    const d = dTo(ex.date), urg = d <= 14, c = urg ? { acc: "#c026d3", br: "rgba(192,38,211,0.3)", bg: "rgba(192,38,211,0.08)" } : UN; return (
                                         <div key={ex.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: "var(--border-radius-md)", background: c.bg, border: `0.5px solid ${c.br}` }}>
-                                            <div style={{ textAlign: "center", minWidth: 46 }}><p style={{ fontSize: 30, fontWeight: 800, margin: 0, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-1.5px", ...gTxt(c.acc, urg ? "#ffd200" : "#fa71cd") }}>{d}</p><p style={{ fontSize: 9, color: "var(--color-text-tertiary)", margin: 0, fontWeight: 700 }}>TAGE</p></div>
+                                            <div style={{ textAlign: "center", minWidth: 46 }}><p style={{ fontSize: 30, fontWeight: 800, margin: 0, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-1.5px", ...gTxt(c.acc, urg ? "#6366f1" : "#6366f1") }}>{d}</p><p style={{ fontSize: 9, color: "var(--color-text-tertiary)", margin: 0, fontWeight: 700 }}>TAGE</p></div>
                                             <div style={{ flex: 1 }}><p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>{ex.name}</p><p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: 0 }}>{new Date(ex.date).toLocaleDateString("de-DE", { day: "numeric", month: "long" })}</p></div>
                                             <button onClick={() => { const e = exams.filter(x => x.id !== ex.id); setExams(e); save("ole:exams", e); }} style={{ fontSize: 18, background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)", padding: "4px" }}>×</button>
                                         </div>
@@ -824,25 +746,25 @@ export default function App() {
                     {uTab === "pomodoro" && (
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24, paddingTop: 8 }}>
                             <div style={{ position: "relative", width: 148, height: 148 }}>
-                                <svg width="148" height="148" viewBox="0 0 148 148"><circle cx="74" cy="74" r={pR} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="9" /><circle cx="74" cy="74" r={pR} fill="none" stroke={pomBreak ? "#00b894" : SP.acc} strokeWidth="9" strokeLinecap="round" strokeDasharray={pC} strokeDashoffset={pOff} transform="rotate(-90 74 74)" style={{ transition: "stroke-dashoffset 0.5s ease" }} /></svg>
-                                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}><p style={{ fontSize: 30, fontWeight: 800, margin: 0, fontVariantNumeric: "tabular-nums", letterSpacing: "-1px", ...gTxt(pomBreak ? "#00b894" : "#f6d365", pomBreak ? "#55efc4" : "#fda085") }}>{fmtT(pomSecs)}</p><p style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-tertiary)", margin: 0, textTransform: "uppercase", letterSpacing: "0.12em" }}>{pomBreak ? "PAUSE" : "FOKUS"}</p></div>
+                                <svg width="148" height="148" viewBox="0 0 148 148"><circle cx="74" cy="74" r={pR} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="9" /><circle cx="74" cy="74" r={pR} fill="none" stroke={pomBreak ? "#6366f1" : SP.acc} strokeWidth="9" strokeLinecap="round" strokeDasharray={pC} strokeDashoffset={pOff} transform="rotate(-90 74 74)" style={{ transition: "stroke-dashoffset 0.5s ease" }} /></svg>
+                                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}><p style={{ fontSize: 30, fontWeight: 800, margin: 0, fontVariantNumeric: "tabular-nums", letterSpacing: "-1px", ...gTxt(pomBreak ? "#6366f1" : "#6366f1", pomBreak ? "#818cf8" : "#c026d3") }}>{fmtT(pomSecs)}</p><p style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-tertiary)", margin: 0, textTransform: "uppercase", letterSpacing: "0.12em" }}>{pomBreak ? "PAUSE" : "FOKUS"}</p></div>
                             </div>
                             <div style={{ display: "flex", gap: 8, alignItems: "center" }}><select value={pomSubj} onChange={e => setPomSubj(e.target.value)} style={{ ...INP, width: "auto", fontSize: 13 }}>{DEF_COURSES.map(c => <option key={c.id}>{c.short}</option>)}</select><span style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}>{pomCount} heute</span></div>
-                            <div style={{ display: "flex", gap: 8 }}><button onClick={() => setPomRun(r => !r)} style={{ padding: "11px 32px", borderRadius: "var(--border-radius-lg)", cursor: "pointer", fontWeight: 700, fontSize: 15, border: "none", background: pomRun ? "var(--color-background-secondary)" : "linear-gradient(135deg,#f6d365,#fda085)", color: pomRun ? "var(--color-text-secondary)" : "#2d1200" }}>{pomRun ? "Pause ⏸" : "Start ▶"}</button><button onClick={() => { setPomRun(false); setPomSecs(25 * 60); setPomBreak(false); }} style={{ padding: "11px 20px", borderRadius: "var(--border-radius-lg)", cursor: "pointer", fontSize: 14, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-secondary)" }}>Reset</button></div>
+                            <div style={{ display: "flex", gap: 8 }}><button onClick={() => setPomRun(r => !r)} style={{ padding: "11px 32px", borderRadius: "var(--border-radius-lg)", cursor: "pointer", fontWeight: 700, fontSize: 15, border: "none", background: pomRun ? "var(--color-background-secondary)" : "linear-gradient(135deg,#6366f1,#c026d3)", color: pomRun ? "var(--color-text-secondary)" : "#ffffff" }}>{pomRun ? "Pause ⏸" : "Start ▶"}</button><button onClick={() => { setPomRun(false); setPomSecs(25 * 60); setPomBreak(false); }} style={{ padding: "11px 20px", borderRadius: "var(--border-radius-lg)", cursor: "pointer", fontSize: 14, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-secondary)" }}>Reset</button></div>
                         </div>
                     )}
                     {uTab === "kurse" && (<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{DEF_COURSES.map(c => { const isT = c.days.includes(tdKey); return (<div key={c.id} style={{ padding: "12px 14px", borderRadius: "var(--border-radius-md)", background: isT ? UN.bg : "var(--color-background-secondary)", border: `0.5px solid ${isT ? UN.acc : "transparent"}` }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}><div><p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 3px", color: isT ? UN.acc : "var(--color-text-primary)" }}>{c.name}</p><p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0 }}>{c.days.join(" · ")} · {c.time} · {c.room}</p></div><span style={{ fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 20, background: UN.bg, color: UN.acc, border: `0.5px solid ${UN.br}`, flexShrink: 0, marginLeft: 8 }}>{c.ects} ECTS</span></div>{isT && <p style={{ fontSize: 11, color: UN.acc, margin: "6px 0 0", fontWeight: 700 }}>↑ Heute</p>}</div>); })}</div>)}
                     {uTab === "noten" && (
                         <div>
-                            {ns && <div style={{ padding: "16px", borderRadius: "var(--border-radius-lg)", background: `linear-gradient(135deg,${UN.bg},rgba(250,113,205,0.08))`, border: `0.5px solid ${UN.br}`, marginBottom: 16, textAlign: "center" }}><p style={{ fontSize: 11, fontWeight: 700, color: UN.acc, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 4px" }}>Notenschnitt</p><p style={{ fontSize: 42, fontWeight: 800, margin: 0, letterSpacing: "-2px", ...gTxt("#c471f5", "#fa71cd") }}>{ns}</p><p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "4px 0 0" }}>{tEcts} ECTS</p></div>}
+                            {ns && <div style={{ padding: "16px", borderRadius: "var(--border-radius-lg)", background: `linear-gradient(135deg,${UN.bg},rgba(99,102,241,0.08))`, border: `0.5px solid ${UN.br}`, marginBottom: 16, textAlign: "center" }}><p style={{ fontSize: 11, fontWeight: 700, color: UN.acc, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 4px" }}>Notenschnitt</p><p style={{ fontSize: 42, fontWeight: 800, margin: 0, letterSpacing: "-2px", ...gTxt("#c026d3", "#6366f1") }}>{ns}</p><p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "4px 0 0" }}>{tEcts} ECTS</p></div>}
                             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>{grades.map((g, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)" }}><span style={{ flex: 1, fontSize: 13 }}>{g.course}</span><span style={{ fontSize: 18, fontWeight: 800, color: UN.acc, fontVariantNumeric: "tabular-nums" }}>{g.grade}</span><span style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>{g.ects} ECTS</span><button onClick={() => { const g2 = grades.filter((_, j) => j !== i); setGrades(g2); save("ole:grades", g2); }} style={{ fontSize: 16, background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)" }}>×</button></div>))}</div>
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><input value={gCrs} onChange={e => setGCrs(e.target.value)} placeholder="Fach" style={{ ...INP, flex: 2, minWidth: 100 }} /><input type="number" step="0.1" value={gVal} onChange={e => setGVal(e.target.value)} placeholder="1.7" style={{ ...INP, flex: 1, minWidth: 60 }} /><input type="number" value={gEcts} onChange={e => setGEcts(e.target.value)} placeholder="ECTS" style={{ ...INP, flex: 1, minWidth: 60 }} /><button onClick={() => { if (!gCrs || !gVal) return; const g2 = [...grades, { course: gCrs, grade: gVal, ects: gEcts || 6 }]; setGrades(g2); save("ole:grades", g2); setGCrs(""); setGVal(""); setGEcts(""); }} style={{ padding: "9px 14px", borderRadius: "var(--border-radius-md)", cursor: "pointer", background: UN.bg, color: UN.acc, border: `0.5px solid ${UN.br}`, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>+ Note</button></div>
                         </div>
                     )}
                     {uTab === "notizen" && (
                         <div>
-                            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}><input value={nTop} onChange={e => setNTop(e.target.value)} onKeyDown={e => { if (e.key === "Enter") genNote(); }} placeholder="Thema, z.B. Preiselastizität..." style={{ ...INP, flex: 1 }} /><button onClick={genNote} disabled={!nTop.trim() || nBusy} style={{ padding: "9px 16px", borderRadius: "var(--border-radius-md)", cursor: "pointer", background: "linear-gradient(135deg,#c471f5,#fa71cd)", color: "#fff", border: "none", fontWeight: 700, fontSize: 13, flexShrink: 0, opacity: nTop.trim() && !nBusy ? 1 : 0.5 }}>{nBusy ? "..." : "✨ Erstellen"}</button></div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{uNotes.map(n => (<div key={n.id} style={{ padding: "12px 14px", borderRadius: "var(--border-radius-lg)", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}><p style={{ fontSize: 14, fontWeight: 700, margin: 0, ...gTxt("#c471f5", "#fa71cd") }}>{n.topic}</p><div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>{n.date}</span><button onClick={() => { const up = uNotes.filter(x => x.id !== n.id); setUNotes(up); save("ole:u-notes", up); }} style={{ fontSize: 16, background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)" }}>×</button></div></div><p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{n.content}</p></div>))}{uNotes.length === 0 && !nBusy && <p style={{ fontSize: 13, color: "var(--color-text-tertiary)" }}>Gib ein Thema ein für eine KI-Zusammenfassung.</p>}</div>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}><input value={nTop} onChange={e => setNTop(e.target.value)} onKeyDown={e => { if (e.key === "Enter") genNote(); }} placeholder="Thema, z.B. Preiselastizität..." style={{ ...INP, flex: 1 }} /><button onClick={genNote} disabled={!nTop.trim() || nBusy} style={{ padding: "9px 16px", borderRadius: "var(--border-radius-md)", cursor: "pointer", background: "linear-gradient(135deg,#c026d3,#6366f1)", color: "#fff", border: "none", fontWeight: 700, fontSize: 13, flexShrink: 0, opacity: nTop.trim() && !nBusy ? 1 : 0.5 }}>{nBusy ? "..." : "✨ Erstellen"}</button></div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{uNotes.map(n => (<div key={n.id} style={{ padding: "12px 14px", borderRadius: "var(--border-radius-lg)", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}><p style={{ fontSize: 14, fontWeight: 700, margin: 0, ...gTxt("#c026d3", "#6366f1") }}>{n.topic}</p><div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>{n.date}</span><button onClick={() => { const up = uNotes.filter(x => x.id !== n.id); setUNotes(up); save("ole:u-notes", up); }} style={{ fontSize: 16, background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)" }}>×</button></div></div><p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{n.content}</p></div>))}{uNotes.length === 0 && !nBusy && <p style={{ fontSize: 13, color: "var(--color-text-tertiary)" }}>Gib ein Thema ein für eine KI-Zusammenfassung.</p>}</div>
                         </div>
                     )}
                     {uTab === "vorbereitung" && (
@@ -852,7 +774,7 @@ export default function App() {
                                 return (
                                     <div key={ex.id} style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                                            <div><p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px", ...gTxt("#c471f5", "#fa71cd") }}>{ex.name}</p><p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: 0 }}>{d} Tage</p></div>
+                                            <div><p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px", ...gTxt("#c026d3", "#6366f1") }}>{ex.name}</p><p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: 0 }}>{d} Tage</p></div>
                                             <button onClick={() => genStudyPlan(ex)} disabled={spBusy === ex.id || !keySet} style={{ fontSize: 11, fontWeight: 600, padding: "5px 11px", borderRadius: 20, background: keySet ? UN.bg : "var(--color-background-secondary)", color: keySet ? UN.acc : "var(--color-text-tertiary)", border: `0.5px solid ${keySet ? UN.br : "transparent"}`, cursor: keySet ? "pointer" : "default" }}>{spBusy === ex.id ? "..." : sp ? "↺ Neu" : "✨ Plan"}</button>
                                         </div>
                                         {sp && sp.phases && (
@@ -899,7 +821,7 @@ export default function App() {
                                 </div>
                                 {card && (
                                     <div>
-                                        <div onClick={() => setFcFlipped(f => !f)} style={{ minHeight: 180, padding: "1.5rem", borderRadius: "var(--border-radius-lg)", background: fcFlipped ? `linear-gradient(135deg,${UN.bg},rgba(250,113,205,0.06))` : "var(--color-background-secondary)", border: `0.5px solid ${UN.br}`, cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", marginBottom: 12 }}>
+                                        <div onClick={() => setFcFlipped(f => !f)} style={{ minHeight: 180, padding: "1.5rem", borderRadius: "var(--border-radius-lg)", background: fcFlipped ? `linear-gradient(135deg,${UN.bg},rgba(99,102,241,0.06))` : "var(--color-background-secondary)", border: `0.5px solid ${UN.br}`, cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", marginBottom: 12 }}>
                                             <p style={{ fontSize: 10, fontWeight: 700, color: UN.acc, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 10px" }}>{fcFlipped ? "Antwort" : "Frage"} · {fcIdx + 1}/{cards.length}</p>
                                             <p style={{ fontSize: 15, lineHeight: 1.55, margin: 0, color: "var(--color-text-primary)" }}>{fcFlipped ? card.a : card.q}</p>
                                             <p style={{ fontSize: 10, color: "var(--color-text-tertiary)", margin: "12px 0 0" }}>Tippen zum Umdrehen</p>
@@ -927,7 +849,7 @@ export default function App() {
                         <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                                 <button onClick={() => setCalDate(new Date(calDate.getFullYear(), calDate.getMonth() - 1, 1))} style={{ fontSize: 18, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-md)", cursor: "pointer", color: KL.acc, padding: "4px 12px" }}>‹</button>
-                                <p style={{ fontSize: 15, fontWeight: 700, margin: 0, textTransform: "capitalize", ...gTxt("#74b9ff", "#a29bfe") }}>{title}</p>
+                                <p style={{ fontSize: 15, fontWeight: 700, margin: 0, textTransform: "capitalize", ...gTxt("#818cf8", "#818cf8") }}>{title}</p>
                                 <button onClick={() => setCalDate(new Date(calDate.getFullYear(), calDate.getMonth() + 1, 1))} style={{ fontSize: 18, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-md)", cursor: "pointer", color: KL.acc, padding: "4px 12px" }}>›</button>
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
@@ -946,7 +868,7 @@ export default function App() {
                                         <div key={i} style={{ minHeight: 56, padding: "5px 5px 4px", borderRadius: "var(--border-radius-md)", background: isToday ? `${KL.acc}20` : "var(--color-background-secondary)", border: isToday ? `0.5px solid ${KL.acc}` : "0.5px solid transparent", display: "flex", flexDirection: "column", position: "relative" }}>
                                             <span style={{ fontSize: 11, fontWeight: isToday ? 800 : 600, color: isToday ? KL.acc : "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>{d.getDate()}</span>
                                             <div style={{ display: "flex", flexDirection: "column", gap: 1, marginTop: 2 }}>
-                                                {exam && <div style={{ fontSize: 8, fontWeight: 700, color: "#f7971e", background: "rgba(247,151,30,0.15)", padding: "1px 3px", borderRadius: 3, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>🎯 {exam.name.split(" ")[0]}</div>}
+                                                {exam && <div style={{ fontSize: 8, fontWeight: 700, color: "#c026d3", background: "rgba(192,38,211,0.15)", padding: "1px 3px", borderRadius: 3, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>🎯 {exam.name.split(" ")[0]}</div>}
                                                 {courses.length > 0 && <div style={{ fontSize: 8, fontWeight: 700, color: UN.acc, background: UN.bg, padding: "1px 3px", borderRadius: 3, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>📚 {courses.length}x</div>}
                                                 {hasRun && <div style={{ fontSize: 8, fontWeight: 700, color: SP.acc, background: SP.bg, padding: "1px 3px", borderRadius: 3 }}>🏃 {weekRuns[ds]}m</div>}
                                             </div>
@@ -956,7 +878,7 @@ export default function App() {
                                 })}
                             </div>
                             <div style={{ display: "flex", gap: 14, justifyContent: "center", marginTop: 14, flexWrap: "wrap" }}>
-                                {[["🎯", "Klausur", "#f7971e"], ["📚", "Vorlesung", UN.acc], ["🏃", "Lauf", SP.acc], ["😴", "Schlaf", BD.acc]].map(([em, l, c]) => (<div key={l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "var(--color-text-tertiary)" }}><span>{em}</span><span style={{ color: c, fontWeight: 600 }}>{l}</span></div>))}
+                                {[["🎯", "Klausur", "#c026d3"], ["📚", "Vorlesung", UN.acc], ["🏃", "Lauf", SP.acc], ["😴", "Schlaf", BD.acc]].map(([em, l, c]) => (<div key={l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "var(--color-text-tertiary)" }}><span>{em}</span><span style={{ color: c, fontWeight: 600 }}>{l}</span></div>))}
                             </div>
                         </div>
                     </div>
@@ -967,17 +889,18 @@ export default function App() {
             {tab === "coach" && (
                 <div>
                     <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", overflow: "hidden" }}>
-                        <div style={{ padding: "0.875rem 1rem", borderBottom: "0.5px solid var(--color-border-tertiary)", background: "linear-gradient(135deg,rgba(247,151,30,0.06),rgba(255,210,0,0.04))" }}><p style={{ margin: 0, fontSize: 14, fontWeight: 700, ...gTxt("#f7971e", "#ffd200") }}>KI-Coach</p><p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary)" }}>Kennt dein vollständiges Profil.</p></div>
+                        <div style={{ padding: "0.875rem 1rem", borderBottom: "0.5px solid var(--color-border-tertiary)", background: "linear-gradient(135deg,rgba(192,38,211,0.06),rgba(99,102,241,0.04))" }}><p style={{ margin: 0, fontSize: 14, fontWeight: 700, ...gTxt("#c026d3", "#6366f1") }}>KI-Coach</p><p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary)" }}>Kennt dein vollständiges Profil.</p></div>
                         <div style={{ padding: "1rem", minHeight: 240, maxHeight: 380, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
                             {msgs.length === 0 && (<div><p style={{ color: "var(--color-text-secondary)", fontSize: 12, margin: "0 0 10px" }}>Schnellstart:</p>{["Erstelle meinen Wochenplan", "Was ist mein optimales Wochenvolumen?", "Wie kombiniere ich Sport & Uni?"].map(q => (<button key={q} onClick={() => setChatTxt(q)} style={{ display: "block", textAlign: "left", width: "100%", fontSize: 12, padding: "7px 11px", marginBottom: 5, borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)", cursor: "pointer", color: "var(--color-text-secondary)", lineHeight: 1.4 }}>{q}</button>))}</div>)}
-                            {msgs.map((m, i) => (<div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "86%", background: m.role === "user" ? "rgba(247,151,30,0.1)" : "var(--color-background-secondary)", color: m.role === "user" ? "#f7971e" : "var(--color-text-primary)", padding: "9px 13px", borderRadius: "var(--border-radius-lg)", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap", border: m.role === "user" ? "0.5px solid rgba(247,151,30,0.2)" : "none" }}>{m.content}</div>))}
+                            {msgs.map((m, i) => (<div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "86%", background: m.role === "user" ? "rgba(192,38,211,0.1)" : "var(--color-background-secondary)", color: m.role === "user" ? "#c026d3" : "var(--color-text-primary)", padding: "9px 13px", borderRadius: "var(--border-radius-lg)", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap", border: m.role === "user" ? "0.5px solid rgba(192,38,211,0.2)" : "none" }}>{m.content}</div>))}
                             {chatBusy && <div style={{ alignSelf: "flex-start", background: "var(--color-background-secondary)", padding: "9px 13px", borderRadius: "var(--border-radius-lg)", fontSize: 13, color: "var(--color-text-secondary)" }}>Coach tippt...</div>}
                             <div ref={endRef} />
                         </div>
-                        <div style={{ padding: "0.75rem 1rem", borderTop: "0.5px solid var(--color-border-tertiary)", display: "flex", gap: 8 }}><input value={chatTxt} onChange={e => setChatTxt(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); sendChat(); } }} placeholder="Frage deinen Coach..." style={{ flex: 1, fontSize: 13, padding: "8px 12px", borderRadius: "var(--border-radius-md)", border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-primary)", color: "var(--color-text-primary)", fontFamily: "var(--font-sans)" }} /><button onClick={sendChat} disabled={chatBusy || !chatTxt.trim()} style={{ padding: "8px 18px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-md)", cursor: "pointer", border: "none", background: chatTxt.trim() && !chatBusy ? "linear-gradient(135deg,#f7971e,#ffd200)" : "var(--color-background-secondary)", color: chatTxt.trim() && !chatBusy ? "#2d1200" : "var(--color-text-tertiary)" }}>→</button></div>
+                        <div style={{ padding: "0.75rem 1rem", borderTop: "0.5px solid var(--color-border-tertiary)", display: "flex", gap: 8 }}><input value={chatTxt} onChange={e => setChatTxt(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); sendChat(); } }} placeholder="Frage deinen Coach..." style={{ flex: 1, fontSize: 13, padding: "8px 12px", borderRadius: "var(--border-radius-md)", border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-primary)", color: "var(--color-text-primary)", fontFamily: "var(--font-sans)" }} /><button onClick={sendChat} disabled={chatBusy || !chatTxt.trim()} style={{ padding: "8px 18px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-md)", cursor: "pointer", border: "none", background: chatTxt.trim() && !chatBusy ? "linear-gradient(135deg,#c026d3,#6366f1)" : "var(--color-background-secondary)", color: chatTxt.trim() && !chatBusy ? "#ffffff" : "var(--color-text-tertiary)" }}>→</button></div>
                     </div>
                 </div>
             )}
+            </main>
         </div>
     );
 }
