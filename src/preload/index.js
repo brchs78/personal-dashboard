@@ -10,4 +10,14 @@ contextBridge.exposeInMainWorld('oleAPI', {
         onReady:    (cb) => ipcRenderer.on('health:ready', (_e, payload) => cb(payload)),
         onProgress: (cb) => ipcRenderer.on('health:progress', (_e, payload) => cb(payload)),
     },
+    strava: {
+        status:         () => ipcRenderer.invoke('strava:status'),
+        connect:        () => ipcRenderer.invoke('strava:connect'),
+        disconnect:     () => ipcRenderer.invoke('strava:disconnect'),
+        listActivities: (opts) => ipcRenderer.invoke('strava:list-activities', opts),
+        sync:           (opts) => ipcRenderer.invoke('strava:sync', opts),
+        getActivity:    (id) => ipcRenderer.invoke('strava:get-activity', id),
+        onStatus:       (cb) => ipcRenderer.on('strava:status', (_e, payload) => cb(payload)),
+        onActivities:   (cb) => ipcRenderer.on('strava:activities', (_e, payload) => cb(payload)),
+    },
 })

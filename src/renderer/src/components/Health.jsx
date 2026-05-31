@@ -4,6 +4,7 @@
 
 import { Moon, Heart, Activity, Zap, RefreshCw } from 'lucide-react';
 import { useHealthSummary, useHealthTrend } from '../hooks/useHealth';
+import StravaSection from './StravaSection';
 import tokens from '../styles/tokens';
 
 export default function Health() {
@@ -32,6 +33,7 @@ export default function Health() {
                     <HeartSection />
                 </>
             )}
+            <StravaSection />
         </div>
     );
 }

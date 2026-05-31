@@ -1,7 +1,10 @@
+require('dotenv').config({ path: require('path').join(__dirname, '../../.env') })
+
 const { app, BrowserWindow, globalShortcut, Tray, Menu,
     nativeImage, Notification, ipcMain } = require('electron')
 const path = require('path')
 const healthIPC = require('./health-ipc.js')
+const stravaIPC = require('./strava-ipc.js')
 
 let mainWindow = null
 let tray = null
@@ -104,6 +107,7 @@ app.on('before-quit', () => { isQuitting = true })
 app.whenReady().then(() => {
     createWindow(); registerHotkey(); createTray(); startScheduler()
     healthIPC.init(() => mainWindow)
+    stravaIPC.init(() => mainWindow)
     app.on('activate', () => showWindow())
 })
 app.on('will-quit', () => globalShortcut.unregisterAll())
