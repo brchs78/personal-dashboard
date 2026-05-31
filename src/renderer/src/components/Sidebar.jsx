@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import {
     LayoutDashboard,
     Dumbbell,
+    CalendarDays,
     Activity,
     GraduationCap,
     MessageSquare,
@@ -21,6 +22,7 @@ const BUTTON_SIZE = 44;
 const NAV_ITEMS = [
     { id: "dash", icon: LayoutDashboard, label: "Dashboard" },
     { id: "workout", icon: Dumbbell, label: "Workout" },
+    { id: "plan", icon: CalendarDays, label: "Plan" },
     { id: "health", icon: Activity, label: "Health" },
     { id: "uni", icon: GraduationCap, label: "Uni" },
     { id: "coach", icon: MessageSquare, label: "Coach" },

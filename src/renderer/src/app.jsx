@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import Health from "./components/Health";
+import TrainingPlan from "./components/TrainingPlan";
 import tokens from "./styles/tokens";
 
 // ── Speicher-Adapter: nutzt window.storage (Claude) oder localStorage (Electron) ──
@@ -428,6 +429,9 @@ export default function App() {
 
             {/* ── HEALTH ── */}
             {tab === "health" && <Health />}
+
+            {/* ── TRAINING PLAN ── */}
+            {tab === "plan" && <TrainingPlan />}
 
             {/* ── WORKOUT ── */}
             {tab === "workout" && (

@@ -112,4 +112,9 @@ function init(getWindow) {
     });
 }
 
-module.exports = { init };
+function getCurrentSummary() {
+    if (!state.aggregates) return null;
+    return { latest: state.aggregates.latest, meta: state.aggregates.meta };
+}
+
+module.exports = { init, getCurrentSummary, getTrend };

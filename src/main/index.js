@@ -5,6 +5,7 @@ const { app, BrowserWindow, globalShortcut, Tray, Menu,
 const path = require('path')
 const healthIPC = require('./health-ipc.js')
 const stravaIPC = require('./strava-ipc.js')
+const coachPlanIPC = require('./coach-plan-ipc.js')
 
 let mainWindow = null
 let tray = null
@@ -108,6 +109,10 @@ app.whenReady().then(() => {
     createWindow(); registerHotkey(); createTray(); startScheduler()
     healthIPC.init(() => mainWindow)
     stravaIPC.init(() => mainWindow)
+    coachPlanIPC.init(() => mainWindow, {
+        getHealthSummary: healthIPC.getCurrentSummary,
+        getHealthTrend: healthIPC.getTrend,
+    })
     app.on('activate', () => showWindow())
 })
 app.on('will-quit', () => globalShortcut.unregisterAll())

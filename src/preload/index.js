@@ -20,4 +20,12 @@ contextBridge.exposeInMainWorld('oleAPI', {
         onStatus:       (cb) => ipcRenderer.on('strava:status', (_e, payload) => cb(payload)),
         onActivities:   (cb) => ipcRenderer.on('strava:activities', (_e, payload) => cb(payload)),
     },
+    plan: {
+        getCurrent: () => ipcRenderer.invoke('plan:get-current'),
+        generate:   (opts) => ipcRenderer.invoke('plan:generate', opts),
+        markDone:   (date, done) => ipcRenderer.invoke('plan:mark-done', { date, done }),
+        clear:      () => ipcRenderer.invoke('plan:clear'),
+        onUpdated:  (cb) => ipcRenderer.on('plan:updated', (_e, payload) => cb(payload)),
+        onDoneUpdated: (cb) => ipcRenderer.on('plan:done-updated', (_e, payload) => cb(payload)),
+    },
 })
