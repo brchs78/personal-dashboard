@@ -10,7 +10,6 @@ import {
     Activity,
     ListTodo,
     GraduationCap,
-    MessageSquare,
     Settings,
 } from "lucide-react";
 import tokens from "../styles/tokens";
@@ -20,12 +19,11 @@ const ICON_SIZE = 20;
 const BUTTON_SIZE = 44;
 
 const NAV_ITEMS = [
-    { id: "dash", icon: LayoutDashboard, label: "Dashboard" },
+    { id: "dash", icon: LayoutDashboard, label: "Home" },
     { id: "plan", icon: CalendarDays, label: "Plan" },
     { id: "health", icon: Activity, label: "Health" },
     { id: "todo", icon: ListTodo, label: "ToDo" },
     { id: "uni", icon: GraduationCap, label: "Uni" },
-    { id: "coach", icon: MessageSquare, label: "Coach" },
 ];
 
 export default function Sidebar({ activeTab, onTabChange }) {
