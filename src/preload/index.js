@@ -38,4 +38,11 @@ contextBridge.exposeInMainWorld('oleAPI', {
         migrate:    (legacyItems) => ipcRenderer.invoke('todo:migrate', legacyItems),
         onUpdated:  (cb) => ipcRenderer.on('todo:updated', (_e, payload) => cb(payload)),
     },
+    coach: {
+        send:       ({ apiKey, userMessage }) => ipcRenderer.invoke('coach:send', { apiKey, userMessage }),
+        clear:      () => ipcRenderer.invoke('coach:clear'),
+        getHistory: () => ipcRenderer.invoke('coach:get-history'),
+        onHistoryUpdated: (cb) => ipcRenderer.on('coach:history-updated', (_e, payload) => cb(payload)),
+        onToolEvent:      (cb) => ipcRenderer.on('coach:tool-event', (_e, payload) => cb(payload)),
+    },
 })

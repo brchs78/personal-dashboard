@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { Mic, Square, Trash2 } from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import Health from "./components/Health";
 import TrainingPlan from "./components/TrainingPlan";
 import Todos from "./components/Todos";
+import useCoachChat from "./hooks/useCoachChat";
 import tokens from "./styles/tokens";
 
 // ── Speicher-Adapter: nutzt window.storage (Claude) oder localStorage (Electron) ──
@@ -34,6 +36,20 @@ function getCalDays(year, month) {
     for (let d = 1; d <= last.getDate(); d++) days.push(new Date(year, month, d));
     while (days.length % 7 !== 0) days.push(null);
     return days;
+}
+
+function toolPillLabel(ev) {
+    const input = ev?.input || {};
+    switch (ev?.tool) {
+        case "list_todos":          return input.filter ? `list_todos · ${input.filter}` : "list_todos";
+        case "add_todo":            return `add_todo${input.title ? `: "${input.title}"` : ""}`;
+        case "update_todo":         return "update_todo";
+        case "complete_todo":       return "complete_todo";
+        case "remove_todo":         return "remove_todo";
+        case "get_training_today":  return "training_today";
+        case "get_recovery_status": return "recovery";
+        default:                    return ev?.tool || "tool";
+    }
 }
 
 function gTxt(a, b) {
@@ -117,8 +133,10 @@ export default function App() {
     const [pomRun, setPomRun] = useState(false); const [pomBreak, setPomBreak] = useState(false); const [pomCount, setPomCount] = useState(0);
     const pomRef = useRef(null);
 
-    const [msgs, setMsgs] = useState([]);
-    const [chatTxt, setChatTxt] = useState(""); const [chatBusy, setChatBusy] = useState(false);
+    const coach = useCoachChat();
+    const [chatTxt, setChatTxt] = useState("");
+    const [recording, setRecording] = useState(false);
+    const recogRef = useRef(null);
     const endRef = useRef(null);
 
     // ── NEW STATE ──
@@ -146,7 +164,7 @@ export default function App() {
         if (window.oleAPI?.onRoutine) window.oleAPI.onRoutine((id) => { if (id === "morning") { setTab("dash"); genPlan(); } });
         return () => { clearInterval(pomRef.current); window.removeEventListener("keydown", onKey); };
     }, []);
-    useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+    useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [coach.display.length, coach.busy, coach.liveEvents.length]);
     useEffect(() => {
         if (pomRun) {
             pomRef.current = setInterval(() => {
@@ -224,12 +242,39 @@ export default function App() {
     }
 
     async function sendChat() {
-        if (!chatTxt.trim() || chatBusy) return;
-        const next = [...msgs, { role: "user", content: chatTxt }];
-        setMsgs(next); setChatTxt(""); setChatBusy(true);
-        try { const r = await callAI(next, 1000); setMsgs([...next, { role: "assistant", content: r }]); }
-        catch { setMsgs([...next, { role: "assistant", content: getKey() ? "Verbindungsfehler." : "Bitte API Key eintragen (Zahnrad oben rechts)." }]); }
-        setChatBusy(false);
+        const txt = chatTxt.trim();
+        if (!txt || coach.busy) return;
+        const key = getKey();
+        if (!key) return;
+        setChatTxt("");
+        await coach.send(txt, key);
+    }
+
+    function startVoice() {
+        if (recording) return;
+        const SR = typeof window !== "undefined" ? (window.webkitSpeechRecognition || window.SpeechRecognition) : null;
+        if (!SR) return;
+        const r = new SR();
+        r.lang = "de-DE";
+        r.continuous = false;
+        r.interimResults = true;
+        let last = "";
+        r.onresult = (e) => {
+            last = Array.from(e.results).map((x) => x[0].transcript).join("");
+            setChatTxt(last);
+        };
+        r.onerror = () => setRecording(false);
+        r.onend = () => {
+            setRecording(false);
+            recogRef.current = null;
+        };
+        recogRef.current = r;
+        setRecording(true);
+        try { r.start(); } catch { setRecording(false); }
+    }
+
+    function stopVoice() {
+        try { recogRef.current?.stop(); } catch { /* noop */ }
     }
 
     function saveSleep() {
@@ -681,20 +726,103 @@ export default function App() {
             })()}
 
             {/* ── COACH ── */}
-            {tab === "coach" && (
-                <div>
-                    <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", overflow: "hidden" }}>
-                        <div style={{ padding: "0.875rem 1rem", borderBottom: "0.5px solid var(--color-border-tertiary)", background: "linear-gradient(135deg,rgba(192,38,211,0.06),rgba(99,102,241,0.04))" }}><p style={{ margin: 0, fontSize: 14, fontWeight: 700, ...gTxt("#c026d3", "#6366f1") }}>KI-Coach</p><p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary)" }}>Kennt dein vollständiges Profil.</p></div>
-                        <div style={{ padding: "1rem", minHeight: 240, maxHeight: 380, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
-                            {msgs.length === 0 && (<div><p style={{ color: "var(--color-text-secondary)", fontSize: 12, margin: "0 0 10px" }}>Schnellstart:</p>{["Erstelle meinen Wochenplan", "Was ist mein optimales Wochenvolumen?", "Wie kombiniere ich Sport & Uni?"].map(q => (<button key={q} onClick={() => setChatTxt(q)} style={{ display: "block", textAlign: "left", width: "100%", fontSize: 12, padding: "7px 11px", marginBottom: 5, borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)", cursor: "pointer", color: "var(--color-text-secondary)", lineHeight: 1.4 }}>{q}</button>))}</div>)}
-                            {msgs.map((m, i) => (<div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "86%", background: m.role === "user" ? "rgba(192,38,211,0.1)" : "var(--color-background-secondary)", color: m.role === "user" ? "#c026d3" : "var(--color-text-primary)", padding: "9px 13px", borderRadius: "var(--border-radius-lg)", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap", border: m.role === "user" ? "0.5px solid rgba(192,38,211,0.2)" : "none" }}>{m.content}</div>))}
-                            {chatBusy && <div style={{ alignSelf: "flex-start", background: "var(--color-background-secondary)", padding: "9px 13px", borderRadius: "var(--border-radius-lg)", fontSize: 13, color: "var(--color-text-secondary)" }}>Coach tippt...</div>}
-                            <div ref={endRef} />
+            {tab === "coach" && (() => {
+                const sttAvailable = typeof window !== "undefined" && (window.webkitSpeechRecognition || window.SpeechRecognition);
+                const renderToolPill = (ev, idx) => {
+                    const label = toolPillLabel(ev);
+                    return (
+                        <span key={idx} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10.5, padding: "3px 8px", borderRadius: 999, background: "rgba(99,102,241,0.08)", border: "0.5px solid rgba(99,102,241,0.18)", color: "var(--color-text-secondary)", lineHeight: 1.4, fontFamily: "var(--font-mono)" }}>
+                            ✓ {label}
+                        </span>
+                    );
+                };
+                return (
+                    <div>
+                        <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", overflow: "hidden" }}>
+                            <div style={{ padding: "0.875rem 1rem", borderBottom: "0.5px solid var(--color-border-tertiary)", background: "linear-gradient(135deg,rgba(192,38,211,0.06),rgba(99,102,241,0.04))", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <div>
+                                    <p style={{ margin: 0, fontSize: 14, fontWeight: 700, ...gTxt("#c026d3", "#6366f1") }}>KI-Coach</p>
+                                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary)" }}>Steuert ToDos, kennt Training & Recovery.</p>
+                                </div>
+                                {coach.display.length > 0 && (
+                                    <button onClick={coach.clear} title="Chat zurücksetzen" style={{ padding: 6, borderRadius: "var(--border-radius-md)", border: "0.5px solid var(--color-border-tertiary)", background: "transparent", color: "var(--color-text-tertiary)", cursor: "pointer", display: "inline-flex", alignItems: "center" }}>
+                                        <Trash2 size={14} />
+                                    </button>
+                                )}
+                            </div>
+                            <div style={{ padding: "1rem", minHeight: 240, maxHeight: 380, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+                                {coach.display.length === 0 && !coach.busy && (
+                                    <div>
+                                        <p style={{ color: "var(--color-text-secondary)", fontSize: 12, margin: "0 0 10px" }}>Schnellstart:</p>
+                                        {["Guten Morgen, was steht an?", "Lege ein neues ToDo an", "Wie strukturiere ich meinen Tag?"].map(q => (
+                                            <button key={q} onClick={() => setChatTxt(q)} style={{ display: "block", textAlign: "left", width: "100%", fontSize: 12, padding: "7px 11px", marginBottom: 5, borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)", cursor: "pointer", color: "var(--color-text-secondary)", lineHeight: 1.4 }}>
+                                                {q}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                {coach.display.map((m) => (
+                                    <div key={m.id} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "86%", display: "flex", flexDirection: "column", gap: 4 }}>
+                                        {m.role === "assistant" && m.toolEvents.length > 0 && (
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                                {m.toolEvents.map(renderToolPill)}
+                                            </div>
+                                        )}
+                                        {m.text && (
+                                            <div style={{ background: m.role === "user" ? "rgba(192,38,211,0.1)" : "var(--color-background-secondary)", color: m.role === "user" ? "#c026d3" : "var(--color-text-primary)", padding: "9px 13px", borderRadius: "var(--border-radius-lg)", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap", border: m.role === "user" ? "0.5px solid rgba(192,38,211,0.2)" : "none" }}>
+                                                {m.text}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                {coach.busy && (
+                                    <div style={{ alignSelf: "flex-start", display: "flex", flexDirection: "column", gap: 4 }}>
+                                        {coach.liveEvents.length > 0 && (
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                                {coach.liveEvents.map(renderToolPill)}
+                                            </div>
+                                        )}
+                                        <div style={{ background: "var(--color-background-secondary)", padding: "9px 13px", borderRadius: "var(--border-radius-lg)", fontSize: 13, color: "var(--color-text-secondary)" }}>
+                                            Coach denkt...
+                                        </div>
+                                    </div>
+                                )}
+                                {coach.error && (
+                                    <div style={{ alignSelf: "flex-start", background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.25)", color: "#ef4444", padding: "9px 13px", borderRadius: "var(--border-radius-lg)", fontSize: 12 }}>
+                                        Fehler: {coach.error}
+                                    </div>
+                                )}
+                                <div ref={endRef} />
+                            </div>
+                            <div style={{ padding: "0.75rem 1rem", borderTop: "0.5px solid var(--color-border-tertiary)", display: "flex", gap: 8, alignItems: "center" }}>
+                                <input
+                                    value={chatTxt}
+                                    onChange={e => setChatTxt(e.target.value)}
+                                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); sendChat(); } }}
+                                    placeholder={getKey() ? "Frage deinen Coach..." : "Erst API Key eintragen (Zahnrad)"}
+                                    disabled={coach.busy}
+                                    style={{ flex: 1, fontSize: 13, padding: "8px 12px", borderRadius: "var(--border-radius-md)", border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-primary)", color: "var(--color-text-primary)", fontFamily: "var(--font-sans)" }}
+                                />
+                                <button
+                                    onClick={recording ? stopVoice : startVoice}
+                                    disabled={!sttAvailable || coach.busy}
+                                    title={sttAvailable ? (recording ? "Aufnahme stoppen" : "Sprechen") : "Spracheingabe nicht verfügbar"}
+                                    style={{ padding: 8, borderRadius: "var(--border-radius-md)", cursor: sttAvailable && !coach.busy ? "pointer" : "not-allowed", border: "0.5px solid var(--color-border-tertiary)", background: recording ? "rgba(239,68,68,0.15)" : "var(--color-background-secondary)", color: recording ? "#ef4444" : "var(--color-text-secondary)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                                >
+                                    {recording ? <Square size={14} /> : <Mic size={14} />}
+                                </button>
+                                <button
+                                    onClick={sendChat}
+                                    disabled={coach.busy || !chatTxt.trim() || !getKey()}
+                                    style={{ padding: "8px 18px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-md)", cursor: "pointer", border: "none", background: chatTxt.trim() && !coach.busy && getKey() ? "linear-gradient(135deg,#c026d3,#6366f1)" : "var(--color-background-secondary)", color: chatTxt.trim() && !coach.busy && getKey() ? "#ffffff" : "var(--color-text-tertiary)" }}
+                                >
+                                    →
+                                </button>
+                            </div>
                         </div>
-                        <div style={{ padding: "0.75rem 1rem", borderTop: "0.5px solid var(--color-border-tertiary)", display: "flex", gap: 8 }}><input value={chatTxt} onChange={e => setChatTxt(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); sendChat(); } }} placeholder="Frage deinen Coach..." style={{ flex: 1, fontSize: 13, padding: "8px 12px", borderRadius: "var(--border-radius-md)", border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-primary)", color: "var(--color-text-primary)", fontFamily: "var(--font-sans)" }} /><button onClick={sendChat} disabled={chatBusy || !chatTxt.trim()} style={{ padding: "8px 18px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-md)", cursor: "pointer", border: "none", background: chatTxt.trim() && !chatBusy ? "linear-gradient(135deg,#c026d3,#6366f1)" : "var(--color-background-secondary)", color: chatTxt.trim() && !chatBusy ? "#ffffff" : "var(--color-text-tertiary)" }}>→</button></div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
             </main>
         </div>
     );
