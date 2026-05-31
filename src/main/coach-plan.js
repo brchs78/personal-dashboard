@@ -9,16 +9,18 @@ const TARGET_TIME = '3:10';
 const TARGET_PACE = '4:30/km';
 
 const WEEK_FRAME = `WOCHEN-RAHMEN (fest, nicht ändern):
-- Mo: Easy Run + Yoga
-- Di: Quality Run (Tempo/Threshold/Intervalle je nach Phase)
+- Mo: Easy Run + Yoga (morgens)
+- Di: Hockey-Training (kein Lauf — Sport ist gesetzt, zählt als Cross-Training/Spielsport)
 - Mi: Easy Run + Gym
-- Do: Quality Run (zweite harte Einheit)
+- Do: Hockey-Training (kein Lauf — Sport ist gesetzt)
 - Fr: Radfahren (Cross-Training, KEIN Lauf)
-- Sa: Long Run
-- So: Easy/Medium Run + Yoga abends`;
+- Sa: Long Run (Hauptlauf der Woche)
+- So: Easy/Medium Run + Yoga abends
+
+WICHTIG: Di und Do sind IMMER Hockey. Niemals dort einen Lauf einplanen. Die Lauf-km verteilen sich auf Mo, Mi, Sa, So.`;
 
 const PHASE_GUIDE = `PHASEN-PLAN (heute = Phase 1 Base-Building):
-- Phase 1 (Base, jetzt-4 Wochen): NUR Z2/Easy + Long Run. KEINE Intervalle. Volumen 25→60 km/Woche.
+- Phase 1 (Base, jetzt-4 Wochen): NUR Z2/Easy + Long Run. KEINE Intervalle. Volumen 25→60 km/Woche (nur Lauftage: Mo, Mi, Sa, So).
 - Phase 2 (Build): 1× Threshold + 1× Marathon-Pace-Block, 70-80 km/Woche.
 - Phase 3 (Peak): 2× Quality, Long Runs >32 km, 80-90 km/Woche Peak.
 - Phase 4 (Taper, letzte 3 Wochen): -40% Volumen, Intensität halten.`;
@@ -30,6 +32,13 @@ const COACH_PRINCIPLES = `COACH-PRINZIPIEN:
 - +10% Wochenregel: niemals mehr als 10% Steigerung Woche-zu-Woche.
 - Easy-Pace strikt 5:15-5:40/km (Z2, 130-150 bpm). Wenn schneller → BREMSEN.
 - Marathon-Pace = 4:30/km (Sub-3:10). Threshold = 4:00-4:10/km. Intervalle = 3:45-3:55/km.`;
+
+const HEALTH_CONSTRAINTS = `AKTUELLE GESUNDHEITS-EINSCHRÄNKUNGEN (zwingend beachten):
+- Post-Weisheitszahn-OP + Antibiotika: Immunsystem unter Stress, Heilungsprozess aktiv.
+- Erlaubt: Zone 1-2 Laufen (130-150 bpm), Hockey, Radfahren, Yoga, leichtes Gym.
+- VERBOTEN: Schwimmen/Pool, schweres Gewichtheben, maximale Intensität (Z5, Intervalle <4min/km).
+- Antibiotika reduzieren Belastbarkeit leicht — bei Erschöpfung sofort Intensität senken.
+- Kein Druck: Heilung hat Vorrang. Lieber einen Tag mehr Easy als einen Tag zu früh pushen.`;
 
 function summarizeHealth(summary) {
     if (!summary?.latest) return 'KEINE HEALTH-DATEN VERFÜGBAR.';
@@ -105,6 +114,8 @@ function buildPrompt({ health, hrvTrend, activities, weekStart }) {
 ATHLET: Ole, 193cm, 72kg, VWL-Student LMU München.
 ZIEL: Marathon ${MARATHON_DATE} in ${TARGET_TIME} (Pace ${TARGET_PACE}).
 HEUTE: T-${daysToMarathon} Tage.
+
+${HEALTH_CONSTRAINTS}
 
 ${COACH_PRINCIPLES}
 
