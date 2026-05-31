@@ -59,9 +59,10 @@ function dk(d) { return d.toISOString().split("T")[0]; }
 
 const PROFILE = `Du bist Oles persönlicher KI-Sportcoach und Life-Optimierer.
 IDENTITÄT: Ole, VWL-Student 2. Semester, LMU München. 193cm, 72kg.
-TRAINING: Volume over Speed. Marathon Sub 2:59h am 11.10.2026. Zone-2-Laufen ist Kern.
+TRAINING: Volume over Speed. Marathon Sub 3:10h (Pace 4:30/km) am 11.10.2026. Zone-2-Laufen ist Kern. Aktuell Phase 1 Base-Building.
+WOCHE: Mo Easy+Yoga · Di Hockey · Mi Easy+Gym · Do Hockey · Fr Rad · Sa Long Run · So Rest (Yoga+Mobility). Lauf-km nur Mo/Mi/Sa.
 PHYSIOLOGIE: Starkes KV-System. Schwäche: Periphere Muskulatur acidifiziert bei Threshold.
-STATUS: Post-Weisheitszahn-OP. Erlaubt: Zone 1–2. Verboten: Pool, Schwerheben.
+STATUS: Post-Weisheitszahn-OP + Antibiotika. Erlaubt: Zone 1–2, Hockey, Rad, Yoga. Verboten: Pool, Schwerheben, Max-Intensität. Heilung hat Vorrang.
 Antworte auf Deutsch. Direkt wie ein Elite-Coach.`;
 
 const WG = [40, 0, 55, 40, 0, 80, 30];
@@ -92,7 +93,7 @@ async function callAI(messages, maxTok = 800) {
     }
     const r = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST", headers,
-        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: maxTok, system: PROFILE, messages }),
+        body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: maxTok, system: PROFILE, messages }),
     });
     const d = await r.json();
     return d.content.filter(b => b.type === "text").map(b => b.text).join("");
