@@ -15,9 +15,9 @@ const WEEK_FRAME = `WOCHEN-RAHMEN (fest, nicht ändern):
 - Do: Hockey-Training (kein Lauf — Sport ist gesetzt)
 - Fr: Radfahren (Cross-Training, KEIN Lauf)
 - Sa: Long Run (Hauptlauf der Woche)
-- So: Easy/Medium Run + Yoga abends
+- So: REST DAY — nur Yoga + Mobility/Flexibility (kein Lauf, kein Sport)
 
-WICHTIG: Di und Do sind IMMER Hockey. Niemals dort einen Lauf einplanen. Die Lauf-km verteilen sich auf Mo, Mi, Sa, So.`;
+WICHTIG: Di und Do sind IMMER Hockey. Niemals dort einen Lauf einplanen. So ist IMMER reiner Rest/Yoga-Tag. Die Lauf-km verteilen sich ausschließlich auf Mo, Mi, Sa.`;
 
 const PHASE_GUIDE = `PHASEN-PLAN (heute = Phase 1 Base-Building):
 - Phase 1 (Base, jetzt-4 Wochen): NUR Z2/Easy + Long Run. KEINE Intervalle. Volumen 25→60 km/Woche (nur Lauftage: Mo, Mi, Sa, So).
