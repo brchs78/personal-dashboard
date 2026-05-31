@@ -2,7 +2,7 @@
 // Sammelt Health-Snapshot + Strava-History, baut Prompt, ruft Anthropic API.
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-4-5';
 
 const MARATHON_DATE = '2026-10-11';
 const TARGET_TIME = '3:10';
