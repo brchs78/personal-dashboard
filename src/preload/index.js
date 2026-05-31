@@ -28,4 +28,14 @@ contextBridge.exposeInMainWorld('oleAPI', {
         onUpdated:  (cb) => ipcRenderer.on('plan:updated', (_e, payload) => cb(payload)),
         onDoneUpdated: (cb) => ipcRenderer.on('plan:done-updated', (_e, payload) => cb(payload)),
     },
+    todo: {
+        getAll:     () => ipcRenderer.invoke('todo:get-all'),
+        add:        (partial)     => ipcRenderer.invoke('todo:add', partial),
+        update:     (id, patch)   => ipcRenderer.invoke('todo:update', { id, patch }),
+        remove:     (id)          => ipcRenderer.invoke('todo:remove', id),
+        toggleDone: (id)          => ipcRenderer.invoke('todo:toggle', id),
+        reorder:    (orderedIds)  => ipcRenderer.invoke('todo:reorder', orderedIds),
+        migrate:    (legacyItems) => ipcRenderer.invoke('todo:migrate', legacyItems),
+        onUpdated:  (cb) => ipcRenderer.on('todo:updated', (_e, payload) => cb(payload)),
+    },
 })

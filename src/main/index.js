@@ -6,6 +6,7 @@ const path = require('path')
 const healthIPC = require('./health-ipc.js')
 const stravaIPC = require('./strava-ipc.js')
 const coachPlanIPC = require('./coach-plan-ipc.js')
+const todoIPC = require('./todo-ipc.js')
 
 let mainWindow = null
 let tray = null
@@ -113,6 +114,7 @@ app.whenReady().then(() => {
         getHealthSummary: healthIPC.getCurrentSummary,
         getHealthTrend: healthIPC.getTrend,
     })
+    todoIPC.init(() => mainWindow)
     app.on('activate', () => showWindow())
 })
 app.on('will-quit', () => globalShortcut.unregisterAll())

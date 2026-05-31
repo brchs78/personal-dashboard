@@ -8,6 +8,7 @@ import {
     LayoutDashboard,
     CalendarDays,
     Activity,
+    ListTodo,
     GraduationCap,
     MessageSquare,
     Settings,
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
     { id: "dash", icon: LayoutDashboard, label: "Dashboard" },
     { id: "plan", icon: CalendarDays, label: "Plan" },
     { id: "health", icon: Activity, label: "Health" },
+    { id: "todo", icon: ListTodo, label: "ToDo" },
     { id: "uni", icon: GraduationCap, label: "Uni" },
     { id: "coach", icon: MessageSquare, label: "Coach" },
 ];

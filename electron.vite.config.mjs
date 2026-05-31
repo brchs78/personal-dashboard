@@ -18,6 +18,8 @@ export default defineConfig({
                     "coach-plan": resolve("src/main/coach-plan.js"),
                     "coach-plan-ipc": resolve("src/main/coach-plan-ipc.js"),
                     "coach-plan-store": resolve("src/main/coach-plan-store.js"),
+                    "todo-ipc": resolve("src/main/todo-ipc.js"),
+                    "todo-store": resolve("src/main/todo-store.js"),
                 },
             },
         },

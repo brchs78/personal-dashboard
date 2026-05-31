@@ -3,6 +3,7 @@ import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import Health from "./components/Health";
 import TrainingPlan from "./components/TrainingPlan";
+import Todos from "./components/Todos";
 import tokens from "./styles/tokens";
 
 // ── Speicher-Adapter: nutzt window.storage (Claude) oder localStorage (Electron) ──
@@ -102,10 +103,6 @@ export default function App() {
 
     const [plan, setPlan] = useState(null);
     const [planBusy, setPlanBusy] = useState(true);
-    const [todos, setTodos] = useState([]);
-    const [todoTxt, setTodoTxt] = useState("");
-    const [todoCat, setTodoCat] = useState("Sport");
-
     const [weekRuns, setWeekRuns] = useState({});
 
     const [exams, setExams] = useState(DEF_EXAMS);
@@ -180,7 +177,15 @@ export default function App() {
             const rs = await Promise.allSettled(ks.map(k => store.get(k)));
             const g = (i) => { try { return rs[i].value ? JSON.parse(rs[i].value.value) : null; } catch { return null; } };
             const p = g(0); if (p && p.day === new Date().toDateString()) { setPlan(p.p); setPlanBusy(false); } else genPlan();
-            if (g(1)) setTodos(g(1)); if (g(2)) setWeekRuns(g(2));
+            // ToDos: einmalige Migration der alten localStorage-Items in den neuen Main-Store
+            const legacyTodos = g(1);
+            if (Array.isArray(legacyTodos) && legacyTodos.length && window.oleAPI?.todo) {
+                try {
+                    await window.oleAPI.todo.migrate(legacyTodos);
+                    localStorage.removeItem("ole:todos");
+                } catch (e) { console.warn("todo migrate failed:", e); }
+            }
+            if (g(2)) setWeekRuns(g(2));
             if (g(4)) setExams(g(4)); if (g(5)) setGrades(g(5)); if (g(6)) setUNotes(g(6));
             if (g(7)) setSleepLog(g(7)); if (g(8)) setWeightLog(g(8)); if (g(9)) setRecoveryLog(g(9));
             if (g(11)) setFlashcards(g(11) || {}); if (g(12)) setStudyPlans(g(12) || {});
@@ -350,6 +355,9 @@ export default function App() {
 
             {/* ── TRAINING PLAN ── */}
             {tab === "plan" && <TrainingPlan />}
+
+            {/* ── TODO ── */}
+            {tab === "todo" && <Todos />}
 
             {/* ── BODY ── */}
             {tab === "body" && (
