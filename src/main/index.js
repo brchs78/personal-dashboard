@@ -55,11 +55,13 @@ function createWindow() {
 }
 
 function registerHotkey() {
-    globalShortcut.register('Alt+Space', () => {
+    const ok = globalShortcut.register('Alt+Space', () => {
         if (!mainWindow || mainWindow.isDestroyed()) { showWindow(); return }
         if (mainWindow.isVisible() && mainWindow.isFocused()) mainWindow.hide()
         else { mainWindow.show(); mainWindow.focus() }
     })
+    if (!ok) console.warn('[hotkey] Alt+Space registration FAILED — conflicting shortcut or missing permission')
+    else console.log('[hotkey] Alt+Space registered OK')
 }
 
 function createTray() {
