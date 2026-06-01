@@ -10,14 +10,14 @@ import tokens from '../styles/tokens';
 const TYPE_COLOR = {
     Easy: tokens.colors.accent.secondary,
     Long: tokens.colors.accent.DEFAULT,
-    Tempo: '#a855f7',
-    Threshold: '#a855f7',
-    Intervals: '#c026d3',
-    Recovery: '#818cf8',
-    Cross: '#6366f1',
+    Tempo: tokens.colors.tab.body,
+    Threshold: tokens.colors.tab.body,
+    Intervals: tokens.colors.tab.workout,
+    Recovery: tokens.colors.tab.calendar,
+    Cross: tokens.colors.tab.uni,
     Rest: tokens.colors.text.tertiary,
-    'Yoga+Easy': '#818cf8',
-    'Gym+Easy': '#818cf8',
+    'Yoga+Easy': tokens.colors.tab.calendar,
+    'Gym+Easy': tokens.colors.tab.calendar,
 };
 
 export default function TrainingPlan() {
@@ -91,8 +91,8 @@ function Header({ plan, busy, onGenerate }) {
                     cursor: busy ? 'not-allowed' : 'pointer',
                     opacity: busy ? 0.5 : 1,
                     border: 'none',
-                    borderRadius: tokens.radius.md,
-                    background: tokens.colors.accent.gradient,
+                    borderRadius: tokens.radius.pill,
+                    background: tokens.colors.accent.DEFAULT,
                     color: '#ffffff',
                     boxShadow: tokens.shadow.glow,
                 }}
@@ -124,8 +124,8 @@ function EmptyState({ onGenerate }) {
                 textTransform: 'uppercase',
                 letterSpacing: tokens.typography.letterSpacing.wide,
                 border: 'none',
-                borderRadius: tokens.radius.md,
-                background: tokens.colors.accent.gradient,
+                borderRadius: tokens.radius.pill,
+                background: tokens.colors.accent.DEFAULT,
                 color: '#fff',
                 cursor: 'pointer',
                 boxShadow: tokens.shadow.glow,

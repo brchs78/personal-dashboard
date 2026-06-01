@@ -28,7 +28,7 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 480, height: 720, show: false,
         titleBarStyle: 'hiddenInset',
-        backgroundColor: '#161618',
+        backgroundColor: '#faf9f5',
         webPreferences: {
             preload: path.join(__dirname, '../preload/index.js'),
             sandbox: false,

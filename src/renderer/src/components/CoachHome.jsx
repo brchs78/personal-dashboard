@@ -6,6 +6,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Mic, Trash2 } from "lucide-react";
 import useCoachChat from "../hooks/useCoachChat";
+import tokens from "../styles/tokens";
 import VoiceMode from "./VoiceMode";
 
 const getKey = () =>
@@ -53,8 +54,8 @@ function ToolPill({ ev }) {
                 fontSize: 10.5,
                 padding: "3px 8px",
                 borderRadius: 999,
-                background: "rgba(99,102,241,0.08)",
-                border: "0.5px solid rgba(99,102,241,0.18)",
+                background: tokens.colors.accent.secondarySoft,
+                border: `0.5px solid ${tokens.colors.accent.border}`,
                 color: "var(--color-text-secondary)",
                 lineHeight: 1.4,
                 fontFamily: "var(--font-mono)",
@@ -174,7 +175,7 @@ function EmptyState({ chatTxt, setChatTxt, taRef, onKeyDown, send, apiKey, sttAv
                         letterSpacing: "-0.5px",
                         margin: "0 0 6px",
                         textAlign: "center",
-                        ...gTxt("#c026d3", "#6366f1"),
+                        ...gTxt(tokens.colors.accent.DEFAULT, tokens.colors.accent.secondary),
                     }}
                 >
                     {greeting()}
@@ -257,7 +258,7 @@ function ChatState({ coach, endRef, chatTxt, setChatTxt, taRef, onKeyDown, send,
                     flexShrink: 0,
                 }}
             >
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, ...gTxt("#c026d3", "#6366f1") }}>KI-Coach</p>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, ...gTxt(tokens.colors.accent.DEFAULT, tokens.colors.accent.secondary) }}>KI-Coach</p>
                 <button
                     onClick={coach.clear}
                     title="Chat zurücksetzen"
@@ -307,16 +308,16 @@ function ChatState({ coach, endRef, chatTxt, setChatTxt, taRef, onKeyDown, send,
                             <div
                                 style={{
                                     background: m.role === "user"
-                                        ? "rgba(192,38,211,0.1)"
+                                        ? tokens.colors.accent.soft
                                         : "var(--color-background-secondary)",
-                                    color: m.role === "user" ? "#c026d3" : "var(--color-text-primary)",
+                                    color: m.role === "user" ? tokens.colors.accent.DEFAULT : "var(--color-text-primary)",
                                     padding: "9px 13px",
                                     borderRadius: "var(--border-radius-lg)",
                                     fontSize: m.role === "assistant" ? 15 : 13,
                                     fontFamily: m.role === "assistant" ? "var(--font-serif)" : "var(--font-sans)",
                                     lineHeight: m.role === "assistant" ? 1.7 : 1.6,
                                     whiteSpace: "pre-wrap",
-                                    border: m.role === "user" ? "0.5px solid rgba(192,38,211,0.2)" : "none",
+                                    border: m.role === "user" ? `0.5px solid ${tokens.colors.accent.border}` : "none",
                                 }}
                             >
                                 {m.text}
@@ -458,7 +459,7 @@ function ChatInput({ chatTxt, setChatTxt, taRef, onKeyDown, send, busy, apiKey, 
                     cursor: canSend ? "pointer" : "not-allowed",
                     border: "none",
                     background: canSend
-                        ? "linear-gradient(135deg,#c026d3,#6366f1)"
+                        ? tokens.colors.accent.gradient
                         : "var(--color-background-secondary)",
                     color: canSend ? "#ffffff" : "var(--color-text-tertiary)",
                     display: "inline-flex",

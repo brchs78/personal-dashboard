@@ -60,7 +60,7 @@ function hueFor(str) {
 
 function subColor(ev) {
     if (ev.source === "internal") {
-        return { fill: "rgba(192,38,211,0.18)", border: "#c026d3", accent: "#c026d3" };
+        return { fill: tokens.colors.accent.soft, border: tokens.colors.accent.DEFAULT, accent: tokens.colors.accent.DEFAULT };
     }
     const hue = hueFor(ev.caldav?.calendarUrl || ev.sourceUrl || ev.sourceId || ev.sourceLabel || "");
     return {
@@ -722,9 +722,9 @@ function CalDAVSection({ cal }) {
                                             style={{
                                                 fontSize: 9, padding: "2px 6px",
                                                 borderRadius: 4, cursor: "pointer",
-                                                border: `1px solid ${isTarget ? "#c026d3" : tokens.colors.border.glass}`,
-                                                background: isTarget ? "rgba(192,38,211,0.18)" : "transparent",
-                                                color: isTarget ? "#e879f9" : tokens.colors.text.tertiary,
+                                                border: `1px solid ${isTarget ? tokens.colors.accent.DEFAULT : tokens.colors.border.glass}`,
+                                                background: isTarget ? tokens.colors.accent.soft : "transparent",
+                                                color: isTarget ? tokens.colors.accent.hover : tokens.colors.text.tertiary,
                                             }}
                                         >
                                             {isTarget ? "★ Ziel" : "Ziel"}

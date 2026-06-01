@@ -12,7 +12,7 @@ import { useTodos } from '../hooks/useTodos';
 import tokens from '../styles/tokens';
 
 const CATEGORIES = [
-    { id: 'uni',     label: 'Uni',     color: '#a855f7' },
+    { id: 'uni',     label: 'Uni',     color: tokens.colors.tab.body },
     { id: 'sport',   label: 'Sport',   color: tokens.colors.accent.DEFAULT },
     { id: 'life',    label: 'Life',    color: '#34d399' },
     { id: 'errands', label: 'Errands', color: '#60a5fa' },
@@ -235,8 +235,8 @@ function Header({ openCount, todayCount, overdueCount, adding, onToggleAdd }) {
                     gap: 8,
                     cursor: 'pointer',
                     border: 'none',
-                    borderRadius: tokens.radius.md,
-                    background: adding ? tokens.colors.surface.glass : tokens.colors.accent.gradient,
+                    borderRadius: tokens.radius.pill,
+                    background: adding ? tokens.colors.surface.glass : tokens.colors.accent.DEFAULT,
                     color: '#fff',
                     boxShadow: adding ? 'none' : tokens.shadow.glow,
                 }}
@@ -304,7 +304,7 @@ function AddBar({ onSubmit }) {
                     padding: '8px 10px',
                     fontSize: tokens.typography.fontSize.sm,
                     outline: 'none',
-                    colorScheme: 'dark',
+                    colorScheme: 'light',
                 }}
             />
             <button
@@ -364,9 +364,9 @@ function PrioritySelect({ value, onChange }) {
                 fontWeight: tokens.typography.fontWeight.semibold,
             }}
         >
-            <option value={1} style={{ background: tokens.colors.bg.elevated, color: '#fff' }}>P1</option>
-            <option value={2} style={{ background: tokens.colors.bg.elevated, color: '#fff' }}>P2</option>
-            <option value={3} style={{ background: tokens.colors.bg.elevated, color: '#fff' }}>P3</option>
+            <option value={1} style={{ background: tokens.colors.bg.elevated, color: tokens.colors.text.primary }}>P1</option>
+            <option value={2} style={{ background: tokens.colors.bg.elevated, color: tokens.colors.text.primary }}>P2</option>
+            <option value={3} style={{ background: tokens.colors.bg.elevated, color: tokens.colors.text.primary }}>P3</option>
         </select>
     );
 }
@@ -606,7 +606,7 @@ function TodoItem({ item, onToggle, onRemove, onUpdate }) {
                         padding: '4px 6px',
                         fontSize: 11,
                         outline: 'none',
-                        colorScheme: 'dark',
+                        colorScheme: 'light',
                         cursor: 'pointer',
                     }}
                 />
@@ -678,8 +678,8 @@ function EmptyState({ onAdd }) {
                 textTransform: 'uppercase',
                 letterSpacing: tokens.typography.letterSpacing.wide,
                 border: 'none',
-                borderRadius: tokens.radius.md,
-                background: tokens.colors.accent.gradient,
+                borderRadius: tokens.radius.pill,
+                background: tokens.colors.accent.DEFAULT,
                 color: '#fff',
                 cursor: 'pointer',
                 boxShadow: tokens.shadow.glow,

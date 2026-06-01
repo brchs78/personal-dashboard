@@ -6,6 +6,7 @@
 // - Animierter Magenta-Indigo-Orb
 
 import { useEffect, useRef, useState } from "react";
+import tokens from "../styles/tokens";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Mic, MicOff } from "lucide-react";
 
@@ -210,7 +211,7 @@ export default function VoiceMode({ coach, apiKey, onClose }) {
                     inset: 0,
                     zIndex: 1000,
                     background:
-                        "radial-gradient(circle at center, rgba(192,38,211,0.10), rgba(10,13,26,0.96))",
+                        "radial-gradient(circle at center, rgba(204,120,92,0.08), rgba(250,249,245,0.98))",
                     backdropFilter: "blur(40px)",
                     WebkitBackdropFilter: "blur(40px)",
                     display: "flex",
@@ -243,9 +244,9 @@ export default function VoiceMode({ coach, apiKey, onClose }) {
                         height: 240,
                         borderRadius: "50%",
                         background:
-                            "linear-gradient(135deg, #c026d3 0%, #6366f1 100%)",
+                            `linear-gradient(135deg, ${tokens.colors.accent.DEFAULT} 0%, ${tokens.colors.accent.secondary} 100%)`,
                         boxShadow:
-                            "0 0 60px rgba(192,38,211,0.45), inset 0 0 80px rgba(99,102,241,0.35)",
+                            `0 0 60px rgba(204,120,92,0.35), inset 0 0 80px rgba(139,115,85,0.25)`,
                         willChange: "transform",
                     }}
                 />
@@ -323,9 +324,9 @@ export default function VoiceMode({ coach, apiKey, onClose }) {
                             height: 52,
                             borderRadius: "50%",
                             cursor: "pointer",
-                            border: "0.5px solid rgba(192,38,211,0.35)",
-                            background: "rgba(192,38,211,0.12)",
-                            color: "#c026d3",
+                            border: `0.5px solid ${tokens.colors.accent.border}`,
+                            background: tokens.colors.accent.soft,
+                            color: tokens.colors.accent.DEFAULT,
                             display: "inline-flex",
                             alignItems: "center",
                             justifyContent: "center",

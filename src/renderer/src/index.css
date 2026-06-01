@@ -3,17 +3,19 @@
     --font-serif: 'Newsreader', 'Charter', 'Georgia', serif;
     --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
 
-    --color-background-primary: #0a0d1a;
-    --color-background-secondary: #11142a;
-    --color-text-primary: #ffffff;
-    --color-text-secondary: rgba(255,255,255,0.60);
-    --color-text-tertiary: rgba(255,255,255,0.40);
-    --color-border-primary: rgba(199,26,211,0.20);
-    --color-border-secondary: rgba(255,255,255,0.10);
-    --color-border-tertiary: rgba(255,255,255,0.06);
+    --color-background-primary: #faf9f5;
+    --color-background-secondary: #f3efe7;
+    --color-text-primary: #3d3929;
+    --color-text-secondary: rgba(61,57,41,0.60);
+    --color-text-tertiary: rgba(61,57,41,0.40);
+    --color-border-primary: rgba(204,120,92,0.25);
+    --color-border-secondary: rgba(61,57,41,0.10);
+    --color-border-tertiary: rgba(61,57,41,0.06);
 
-    --border-radius-md: 8px;
-    --border-radius-lg: 12px;
+    --border-radius-md: 14px;
+    --border-radius-lg: 20px;
+
+    color-scheme: light;
 }
 
 * {
@@ -24,7 +26,7 @@ body {
     margin: 0;
     font-family: var(--font-sans);
     letter-spacing: -0.01em;
-    background: #0a0d1a;
+    background: #faf9f5;
     color: var(--color-text-primary);
     -webkit-font-smoothing: antialiased;
     user-select: none;
@@ -53,6 +55,6 @@ select {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.10);
+    background: rgba(61,57,41,0.12);
     border-radius: 4px;
 }

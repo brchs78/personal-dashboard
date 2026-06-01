@@ -445,7 +445,7 @@ function HeartSection() {
                 title="HRV (SDNN)"
                 unit="ms"
                 points={hrv}
-                color="#6366f1"
+                color={tokens.colors.accent.secondary}
                 decimals={0}
             />
         </div>

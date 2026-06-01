@@ -14,11 +14,16 @@ const store = (typeof window !== "undefined" && window.storage) ? window.storage
 };
 const getKey = () => (typeof localStorage !== "undefined" ? localStorage.getItem("ole:api-key") || "" : "");
 
-// ── Colors ── (Magenta-Indigo Palette)
-const SP = { acc: "#c026d3", bg: "rgba(192,38,211,0.10)", br: "rgba(192,38,211,0.25)" };
-const UN = { acc: "#6366f1", bg: "rgba(99,102,241,0.10)", br: "rgba(99,102,241,0.25)" };
-const BD = { acc: "#a855f7", bg: "rgba(168,85,247,0.10)", br: "rgba(168,85,247,0.25)" };
-const KL = { acc: "#818cf8", bg: "rgba(129,140,248,0.10)", br: "rgba(129,140,248,0.25)" };
+// ── Colors ── (Token-basierte Tab-Palette)
+function mkPal(hex) {
+    // Parse hex → rgba variants for bg/border tints
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return { acc: hex, bg: `rgba(${r},${g},${b},0.10)`, br: `rgba(${r},${g},${b},0.25)` };
+}
+const SP = mkPal(tokens.colors.tab.workout);
+const UN = mkPal(tokens.colors.tab.uni);
+const BD = mkPal(tokens.colors.tab.body);
+const KL = mkPal(tokens.colors.tab.calendar);
 
 function calcRecovery(restHR, sleepHrs, stress) {
     const hr = Math.max(0, Math.min(10, (80 - Math.max(40, Math.min(80, restHR))) / 40 * 10));
@@ -320,7 +325,7 @@ export default function App() {
                         <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>Für die Puls-Zonen-Berechnung. Faustregel: 220 − Alter.</p>
                         <input type="number" value={maxHR} onChange={e => setMaxHR(parseInt(e.target.value) || 197)} onBlur={() => save("ole:max-hr", maxHR)} style={{ ...INP, marginBottom: 12 }} />
                         <div style={{ display: "flex", gap: 8 }}>
-                            <button onClick={saveKey} style={{ flex: 1, padding: "10px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontWeight: 700, fontSize: 13, border: "none", background: "linear-gradient(135deg,#c026d3,#6366f1)", color: "#ffffff" }}>Speichern</button>
+                            <button onClick={saveKey} style={{ flex: 1, padding: "10px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontWeight: 700, fontSize: 13, border: "none", background: tokens.colors.accent.DEFAULT, color: "#ffffff" }}>Speichern</button>
                             <button onClick={() => setShowSettings(false)} style={{ padding: "10px 16px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontSize: 13, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-secondary)" }}>Abbrechen</button>
                         </div>
                     </div>
@@ -329,7 +334,7 @@ export default function App() {
 
             {/* API KEY BANNER */}
             {!keySet && (
-                <div onClick={() => setShowSettings(true)} style={{ cursor: "pointer", fontSize: 12, background: "rgba(192,38,211,0.1)", color: "#c026d3", padding: "10px 13px", borderRadius: "var(--border-radius-md)", marginBottom: 16, border: "0.5px solid rgba(192,38,211,0.25)", lineHeight: 1.5 }}>
+                <div onClick={() => setShowSettings(true)} style={{ cursor: "pointer", fontSize: 12, background: tokens.colors.accent.soft, color: tokens.colors.accent.DEFAULT, padding: "10px 13px", borderRadius: "var(--border-radius-md)", marginBottom: 16, border: `0.5px solid ${tokens.colors.accent.border}`, lineHeight: 1.5 }}>
                     ⚙ KI-Features sind noch aus. Tippe hier um deinen API Key einzutragen.
                 </div>
             )}
@@ -368,7 +373,7 @@ export default function App() {
                                         const d = weekDts[i]; const ent = sleepLog.find(s => s.date === dk(d));
                                         const hrs = ent?.hours ?? 0; const isT = d.toDateString() === new Date().toDateString();
                                         const cx = 36 + i * (396 / 7) + (396 / 14); const bH = hrs * 16;
-                                        const optimal = hrs >= 7 && hrs <= 9; const clr = optimal ? BD.acc : hrs >= 6 ? "#6366f1" : "#d63031";
+                                        const optimal = hrs >= 7 && hrs <= 9; const clr = optimal ? BD.acc : hrs >= 6 ? tokens.colors.accent.secondary : tokens.colors.status.danger;
                                         return (
                                             <g key={day}>
                                                 {hrs > 0 && <rect x={cx - 12} y={142 - bH} width={24} height={bH} rx="3" fill={clr} fillOpacity={isT ? 1 : 0.6} />}
@@ -390,7 +395,7 @@ export default function App() {
                                 <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                                     {SLEEP_QUAL.map((em, i) => <button key={i} onClick={() => setSleepQ(sleepQ === i ? null : i)} style={{ flex: 1, fontSize: 24, padding: "10px 0", borderRadius: "var(--border-radius-md)", cursor: "pointer", lineHeight: 1, background: sleepQ === i ? BD.bg : "var(--color-background-secondary)", border: sleepQ === i ? `0.5px solid ${BD.acc}` : "0.5px solid transparent" }}>{em}</button>)}
                                 </div>
-                                <button onClick={saveSleep} disabled={!sleepH} style={{ width: "100%", padding: "12px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: sleepH ? "pointer" : "default", border: "none", background: sleepH ? `linear-gradient(135deg,#6366f1,#818cf8)` : "var(--color-background-secondary)", color: sleepH ? "#ffffff" : "var(--color-text-tertiary)" }}>Speichern</button>
+                                <button onClick={saveSleep} disabled={!sleepH} style={{ width: "100%", padding: "12px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: sleepH ? "pointer" : "default", border: "none", background: sleepH ? tokens.colors.accent.DEFAULT : "var(--color-background-secondary)", color: sleepH ? "#ffffff" : "var(--color-text-tertiary)" }}>Speichern</button>
                             </div>
                         </div>
                     )}
@@ -408,11 +413,11 @@ export default function App() {
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
                                         <div>
                                             <p style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 4px" }}>Aktuell</p>
-                                            <p style={{ fontSize: 36, fontWeight: 800, margin: 0, letterSpacing: "-1.5px", ...gTxt("#6366f1", "#818cf8") }}>{cur ?? "–"}<span style={{ fontSize: 14, fontWeight: 600 }}> kg</span></p>
+                                            <p style={{ fontSize: 36, fontWeight: 800, margin: 0, letterSpacing: "-1.5px", ...gTxt(tokens.colors.accent.secondary, tokens.colors.tab.calendar) }}>{cur ?? "–"}<span style={{ fontSize: 14, fontWeight: 600 }}> kg</span></p>
                                         </div>
                                         {trend !== null && <div style={{ textAlign: "right" }}>
                                             <p style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 4px" }}>Trend 7d</p>
-                                            <p style={{ fontSize: 20, fontWeight: 700, margin: 0, color: parseFloat(trend) > 0 ? "#c026d3" : BD.acc }}>{trend > 0 ? "+" : ""}{trend} kg</p>
+                                            <p style={{ fontSize: 20, fontWeight: 700, margin: 0, color: parseFloat(trend) > 0 ? tokens.colors.accent.DEFAULT : BD.acc }}>{trend > 0 ? "+" : ""}{trend} kg</p>
                                         </div>}
                                     </div>
                                     {sorted.length > 1 && (
@@ -428,7 +433,7 @@ export default function App() {
                                 <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem" }}>
                                     <p style={LBL}>Heutiges Gewicht (kg)</p>
                                     <input type="number" step="0.1" value={wgInput} onChange={e => setWgInput(e.target.value)} placeholder="72.3" style={{ ...BINP, marginBottom: 14 }} />
-                                    <button onClick={saveWeight} disabled={!wgInput} style={{ width: "100%", padding: "12px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: wgInput ? "pointer" : "default", border: "none", background: wgInput ? `linear-gradient(135deg,#6366f1,#818cf8)` : "var(--color-background-secondary)", color: wgInput ? "#ffffff" : "var(--color-text-tertiary)" }}>Speichern</button>
+                                    <button onClick={saveWeight} disabled={!wgInput} style={{ width: "100%", padding: "12px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: wgInput ? "pointer" : "default", border: "none", background: wgInput ? tokens.colors.accent.DEFAULT : "var(--color-background-secondary)", color: wgInput ? "#ffffff" : "var(--color-text-tertiary)" }}>Speichern</button>
                                 </div>
                             </div>
                         );
@@ -441,7 +446,7 @@ export default function App() {
                                 {today && (
                                     <div style={{ background: `linear-gradient(135deg,${BD.bg},rgba(99,102,241,0.06))`, border: `0.5px solid ${BD.br}`, borderRadius: "var(--border-radius-lg)", padding: "1.25rem", marginBottom: "1.25rem", textAlign: "center" }}>
                                         <p style={{ fontSize: 11, fontWeight: 700, color: BD.acc, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 6px" }}>Recovery Score</p>
-                                        <p style={{ fontSize: 56, fontWeight: 800, margin: 0, letterSpacing: "-2.5px", ...gTxt("#6366f1", "#818cf8") }}>{today.score}<span style={{ fontSize: 16, fontWeight: 600 }}>/10</span></p>
+                                        <p style={{ fontSize: 56, fontWeight: 800, margin: 0, letterSpacing: "-2.5px", ...gTxt(tokens.colors.accent.secondary, tokens.colors.tab.calendar) }}>{today.score}<span style={{ fontSize: 16, fontWeight: 600 }}>/10</span></p>
                                         <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "8px 0 0" }}>Ruhe-HF {today.restHR} bpm · {today.stress !== null ? STRESS_LVL[today.stress] : "–"}</p>
                                     </div>
                                 )}
@@ -455,7 +460,7 @@ export default function App() {
                                     <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                                         {STRESS_LVL.map((em, i) => <button key={i} onClick={() => setRstStress(rstStress === i ? null : i)} style={{ flex: 1, fontSize: 22, padding: "10px 0", borderRadius: "var(--border-radius-md)", cursor: "pointer", lineHeight: 1, background: rstStress === i ? BD.bg : "var(--color-background-secondary)", border: rstStress === i ? `0.5px solid ${BD.acc}` : "0.5px solid transparent" }}>{em}</button>)}
                                     </div>
-                                    <button onClick={saveRecovery} disabled={!rstHR} style={{ width: "100%", padding: "12px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: rstHR ? "pointer" : "default", border: "none", background: rstHR ? `linear-gradient(135deg,#6366f1,#818cf8)` : "var(--color-background-secondary)", color: rstHR ? "#ffffff" : "var(--color-text-tertiary)" }}>Recovery berechnen</button>
+                                    <button onClick={saveRecovery} disabled={!rstHR} style={{ width: "100%", padding: "12px", fontSize: 14, fontWeight: 700, borderRadius: "var(--border-radius-lg)", cursor: rstHR ? "pointer" : "default", border: "none", background: rstHR ? tokens.colors.accent.DEFAULT : "var(--color-background-secondary)", color: rstHR ? "#ffffff" : "var(--color-text-tertiary)" }}>Recovery berechnen</button>
                                 </div>
                                 {recoveryLog.length > 1 && (
                                     <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem", marginTop: "1.25rem" }}>
@@ -465,7 +470,7 @@ export default function App() {
                                                 <div key={i} style={{ display: "flex", gap: 8, fontSize: 12, padding: "6px 10px", borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)" }}>
                                                     <span style={{ color: "var(--color-text-tertiary)", minWidth: 80 }}>{r.date}</span>
                                                     <span style={{ flex: 1, color: "var(--color-text-secondary)" }}>{r.restHR} bpm</span>
-                                                    <span style={{ fontWeight: 700, color: r.score >= 7 ? BD.acc : r.score >= 5 ? "#6366f1" : "#d63031" }}>{r.score}/10</span>
+                                                    <span style={{ fontWeight: 700, color: r.score >= 7 ? BD.acc : r.score >= 5 ? tokens.colors.accent.secondary : tokens.colors.status.danger }}>{r.score}/10</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -484,7 +489,7 @@ export default function App() {
                             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                                 {[[1, 0, 60, "Aktive Erholung", "Sehr leicht, locker"], [2, 60, 70, "Aerob / Fettverbrennung", "Komfortabel, Unterhaltung möglich"], [3, 70, 80, "Aerob-Anaerob Mix", "Spürbar, kontrolliert anstrengend"], [4, 80, 90, "Threshold", "Hart, kaum sprechen"], [5, 90, 100, "VO2max / Maximal", "Maximal, nur kurze Intervalle"]].map(([z, lo, hi, name, desc]) => {
                                     const loB = Math.round(maxHR * lo / 100); const hiB = Math.round(maxHR * hi / 100);
-                                    const clr = z === 1 ? "#818cf8" : z === 2 ? "#6366f1" : z === 3 ? "#6366f1" : z === 4 ? "#c026d3" : "#d63031";
+                                    const clr = z === 1 ? tokens.colors.tab.calendar : z === 2 ? tokens.colors.accent.secondary : z === 3 ? tokens.colors.accent.secondary : z === 4 ? tokens.colors.accent.DEFAULT : tokens.colors.status.danger;
                                     return (
                                         <div key={z} style={{ padding: "10px 12px", borderRadius: "var(--border-radius-md)", background: `${clr}15`, border: `0.5px solid ${clr}40` }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 2 }}>
@@ -512,9 +517,9 @@ export default function App() {
                         <div>
                             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
                                 {[...exams].sort((a, b) => new Date(a.date) - new Date(b.date)).map(ex => {
-                                    const d = dTo(ex.date), urg = d <= 14, c = urg ? { acc: "#c026d3", br: "rgba(192,38,211,0.3)", bg: "rgba(192,38,211,0.08)" } : UN; return (
+                                    const d = dTo(ex.date), urg = d <= 14, c = urg ? SP : UN; return (
                                         <div key={ex.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: "var(--border-radius-md)", background: c.bg, border: `0.5px solid ${c.br}` }}>
-                                            <div style={{ textAlign: "center", minWidth: 46 }}><p style={{ fontSize: 30, fontWeight: 800, margin: 0, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-1.5px", ...gTxt(c.acc, urg ? "#6366f1" : "#6366f1") }}>{d}</p><p style={{ fontSize: 9, color: "var(--color-text-tertiary)", margin: 0, fontWeight: 700 }}>TAGE</p></div>
+                                            <div style={{ textAlign: "center", minWidth: 46 }}><p style={{ fontSize: 30, fontWeight: 800, margin: 0, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-1.5px", ...gTxt(c.acc, tokens.colors.accent.secondary) }}>{d}</p><p style={{ fontSize: 9, color: "var(--color-text-tertiary)", margin: 0, fontWeight: 700 }}>TAGE</p></div>
                                             <div style={{ flex: 1 }}><p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 2px" }}>{ex.name}</p><p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: 0 }}>{new Date(ex.date).toLocaleDateString("de-DE", { day: "numeric", month: "long" })}</p></div>
                                             <button onClick={() => { const e = exams.filter(x => x.id !== ex.id); setExams(e); save("ole:exams", e); }} style={{ fontSize: 18, background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)", padding: "4px" }}>×</button>
                                         </div>
@@ -531,25 +536,25 @@ export default function App() {
                     {uTab === "pomodoro" && (
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24, paddingTop: 8 }}>
                             <div style={{ position: "relative", width: 148, height: 148 }}>
-                                <svg width="148" height="148" viewBox="0 0 148 148"><circle cx="74" cy="74" r={pR} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="9" /><circle cx="74" cy="74" r={pR} fill="none" stroke={pomBreak ? "#6366f1" : SP.acc} strokeWidth="9" strokeLinecap="round" strokeDasharray={pC} strokeDashoffset={pOff} transform="rotate(-90 74 74)" style={{ transition: "stroke-dashoffset 0.5s ease" }} /></svg>
-                                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}><p style={{ fontSize: 30, fontWeight: 800, margin: 0, fontVariantNumeric: "tabular-nums", letterSpacing: "-1px", ...gTxt(pomBreak ? "#6366f1" : "#6366f1", pomBreak ? "#818cf8" : "#c026d3") }}>{fmtT(pomSecs)}</p><p style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-tertiary)", margin: 0, textTransform: "uppercase", letterSpacing: "0.12em" }}>{pomBreak ? "PAUSE" : "FOKUS"}</p></div>
+                                <svg width="148" height="148" viewBox="0 0 148 148"><circle cx="74" cy="74" r={pR} fill="none" stroke="rgba(61,57,41,0.08)" strokeWidth="9" /><circle cx="74" cy="74" r={pR} fill="none" stroke={pomBreak ? tokens.colors.accent.secondary : SP.acc} strokeWidth="9" strokeLinecap="round" strokeDasharray={pC} strokeDashoffset={pOff} transform="rotate(-90 74 74)" style={{ transition: "stroke-dashoffset 0.5s ease" }} /></svg>
+                                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}><p style={{ fontSize: 30, fontWeight: 800, margin: 0, fontVariantNumeric: "tabular-nums", letterSpacing: "-1px", ...gTxt(tokens.colors.accent.secondary, pomBreak ? tokens.colors.tab.calendar : tokens.colors.accent.DEFAULT) }}>{fmtT(pomSecs)}</p><p style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-tertiary)", margin: 0, textTransform: "uppercase", letterSpacing: "0.12em" }}>{pomBreak ? "PAUSE" : "FOKUS"}</p></div>
                             </div>
                             <div style={{ display: "flex", gap: 8, alignItems: "center" }}><select value={pomSubj} onChange={e => setPomSubj(e.target.value)} style={{ ...INP, width: "auto", fontSize: 13 }}>{DEF_COURSES.map(c => <option key={c.id}>{c.short}</option>)}</select><span style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}>{pomCount} heute</span></div>
-                            <div style={{ display: "flex", gap: 8 }}><button onClick={() => setPomRun(r => !r)} style={{ padding: "11px 32px", borderRadius: "var(--border-radius-lg)", cursor: "pointer", fontWeight: 700, fontSize: 15, border: "none", background: pomRun ? "var(--color-background-secondary)" : "linear-gradient(135deg,#6366f1,#c026d3)", color: pomRun ? "var(--color-text-secondary)" : "#ffffff" }}>{pomRun ? "Pause ⏸" : "Start ▶"}</button><button onClick={() => { setPomRun(false); setPomSecs(25 * 60); setPomBreak(false); }} style={{ padding: "11px 20px", borderRadius: "var(--border-radius-lg)", cursor: "pointer", fontSize: 14, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-secondary)" }}>Reset</button></div>
+                            <div style={{ display: "flex", gap: 8 }}><button onClick={() => setPomRun(r => !r)} style={{ padding: "11px 32px", borderRadius: "var(--border-radius-lg)", cursor: "pointer", fontWeight: 700, fontSize: 15, border: "none", background: pomRun ? "var(--color-background-secondary)" : tokens.colors.accent.DEFAULT, color: pomRun ? "var(--color-text-secondary)" : "#ffffff" }}>{pomRun ? "Pause ⏸" : "Start ▶"}</button><button onClick={() => { setPomRun(false); setPomSecs(25 * 60); setPomBreak(false); }} style={{ padding: "11px 20px", borderRadius: "var(--border-radius-lg)", cursor: "pointer", fontSize: 14, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-secondary)" }}>Reset</button></div>
                         </div>
                     )}
                     {uTab === "kurse" && (<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{DEF_COURSES.map(c => { const isT = c.days.includes(tdKey); return (<div key={c.id} style={{ padding: "12px 14px", borderRadius: "var(--border-radius-md)", background: isT ? UN.bg : "var(--color-background-secondary)", border: `0.5px solid ${isT ? UN.acc : "transparent"}` }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}><div><p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 3px", color: isT ? UN.acc : "var(--color-text-primary)" }}>{c.name}</p><p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0 }}>{c.days.join(" · ")} · {c.time} · {c.room}</p></div><span style={{ fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 20, background: UN.bg, color: UN.acc, border: `0.5px solid ${UN.br}`, flexShrink: 0, marginLeft: 8 }}>{c.ects} ECTS</span></div>{isT && <p style={{ fontSize: 11, color: UN.acc, margin: "6px 0 0", fontWeight: 700 }}>↑ Heute</p>}</div>); })}</div>)}
                     {uTab === "noten" && (
                         <div>
-                            {ns && <div style={{ padding: "16px", borderRadius: "var(--border-radius-lg)", background: `linear-gradient(135deg,${UN.bg},rgba(99,102,241,0.08))`, border: `0.5px solid ${UN.br}`, marginBottom: 16, textAlign: "center" }}><p style={{ fontSize: 11, fontWeight: 700, color: UN.acc, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 4px" }}>Notenschnitt</p><p style={{ fontSize: 42, fontWeight: 800, margin: 0, letterSpacing: "-2px", ...gTxt("#c026d3", "#6366f1") }}>{ns}</p><p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "4px 0 0" }}>{tEcts} ECTS</p></div>}
+                            {ns && <div style={{ padding: "16px", borderRadius: "var(--border-radius-lg)", background: `linear-gradient(135deg,${UN.bg},rgba(99,102,241,0.08))`, border: `0.5px solid ${UN.br}`, marginBottom: 16, textAlign: "center" }}><p style={{ fontSize: 11, fontWeight: 700, color: UN.acc, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 4px" }}>Notenschnitt</p><p style={{ fontSize: 42, fontWeight: 800, margin: 0, letterSpacing: "-2px", ...gTxt(tokens.colors.accent.DEFAULT, tokens.colors.accent.secondary) }}>{ns}</p><p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "4px 0 0" }}>{tEcts} ECTS</p></div>}
                             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>{grades.map((g, i) => (<div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)" }}><span style={{ flex: 1, fontSize: 13 }}>{g.course}</span><span style={{ fontSize: 18, fontWeight: 800, color: UN.acc, fontVariantNumeric: "tabular-nums" }}>{g.grade}</span><span style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>{g.ects} ECTS</span><button onClick={() => { const g2 = grades.filter((_, j) => j !== i); setGrades(g2); save("ole:grades", g2); }} style={{ fontSize: 16, background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)" }}>×</button></div>))}</div>
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><input value={gCrs} onChange={e => setGCrs(e.target.value)} placeholder="Fach" style={{ ...INP, flex: 2, minWidth: 100 }} /><input type="number" step="0.1" value={gVal} onChange={e => setGVal(e.target.value)} placeholder="1.7" style={{ ...INP, flex: 1, minWidth: 60 }} /><input type="number" value={gEcts} onChange={e => setGEcts(e.target.value)} placeholder="ECTS" style={{ ...INP, flex: 1, minWidth: 60 }} /><button onClick={() => { if (!gCrs || !gVal) return; const g2 = [...grades, { course: gCrs, grade: gVal, ects: gEcts || 6 }]; setGrades(g2); save("ole:grades", g2); setGCrs(""); setGVal(""); setGEcts(""); }} style={{ padding: "9px 14px", borderRadius: "var(--border-radius-md)", cursor: "pointer", background: UN.bg, color: UN.acc, border: `0.5px solid ${UN.br}`, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>+ Note</button></div>
                         </div>
                     )}
                     {uTab === "notizen" && (
                         <div>
-                            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}><input value={nTop} onChange={e => setNTop(e.target.value)} onKeyDown={e => { if (e.key === "Enter") genNote(); }} placeholder="Thema, z.B. Preiselastizität..." style={{ ...INP, flex: 1 }} /><button onClick={genNote} disabled={!nTop.trim() || nBusy} style={{ padding: "9px 16px", borderRadius: "var(--border-radius-md)", cursor: "pointer", background: "linear-gradient(135deg,#c026d3,#6366f1)", color: "#fff", border: "none", fontWeight: 700, fontSize: 13, flexShrink: 0, opacity: nTop.trim() && !nBusy ? 1 : 0.5 }}>{nBusy ? "..." : "✨ Erstellen"}</button></div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{uNotes.map(n => (<div key={n.id} style={{ padding: "12px 14px", borderRadius: "var(--border-radius-lg)", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}><p style={{ fontSize: 14, fontWeight: 700, margin: 0, ...gTxt("#c026d3", "#6366f1") }}>{n.topic}</p><div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>{n.date}</span><button onClick={() => { const up = uNotes.filter(x => x.id !== n.id); setUNotes(up); save("ole:u-notes", up); }} style={{ fontSize: 16, background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)" }}>×</button></div></div><p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{n.content}</p></div>))}{uNotes.length === 0 && !nBusy && <p style={{ fontSize: 13, color: "var(--color-text-tertiary)" }}>Gib ein Thema ein für eine KI-Zusammenfassung.</p>}</div>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}><input value={nTop} onChange={e => setNTop(e.target.value)} onKeyDown={e => { if (e.key === "Enter") genNote(); }} placeholder="Thema, z.B. Preiselastizität..." style={{ ...INP, flex: 1 }} /><button onClick={genNote} disabled={!nTop.trim() || nBusy} style={{ padding: "9px 16px", borderRadius: "var(--border-radius-md)", cursor: "pointer", background: tokens.colors.accent.DEFAULT, color: "#fff", border: "none", fontWeight: 700, fontSize: 13, flexShrink: 0, opacity: nTop.trim() && !nBusy ? 1 : 0.5 }}>{nBusy ? "..." : "✨ Erstellen"}</button></div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{uNotes.map(n => (<div key={n.id} style={{ padding: "12px 14px", borderRadius: "var(--border-radius-lg)", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}><p style={{ fontSize: 14, fontWeight: 700, margin: 0, ...gTxt(tokens.colors.accent.DEFAULT, tokens.colors.accent.secondary) }}>{n.topic}</p><div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>{n.date}</span><button onClick={() => { const up = uNotes.filter(x => x.id !== n.id); setUNotes(up); save("ole:u-notes", up); }} style={{ fontSize: 16, background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)" }}>×</button></div></div><p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: 0, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{n.content}</p></div>))}{uNotes.length === 0 && !nBusy && <p style={{ fontSize: 13, color: "var(--color-text-tertiary)" }}>Gib ein Thema ein für eine KI-Zusammenfassung.</p>}</div>
                         </div>
                     )}
                     {uTab === "vorbereitung" && (
@@ -559,7 +564,7 @@ export default function App() {
                                 return (
                                     <div key={ex.id} style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                                            <div><p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px", ...gTxt("#c026d3", "#6366f1") }}>{ex.name}</p><p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: 0 }}>{d} Tage</p></div>
+                                            <div><p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 2px", ...gTxt(tokens.colors.accent.DEFAULT, tokens.colors.accent.secondary) }}>{ex.name}</p><p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: 0 }}>{d} Tage</p></div>
                                             <button onClick={() => genStudyPlan(ex)} disabled={spBusy === ex.id || !keySet} style={{ fontSize: 11, fontWeight: 600, padding: "5px 11px", borderRadius: 20, background: keySet ? UN.bg : "var(--color-background-secondary)", color: keySet ? UN.acc : "var(--color-text-tertiary)", border: `0.5px solid ${keySet ? UN.br : "transparent"}`, cursor: keySet ? "pointer" : "default" }}>{spBusy === ex.id ? "..." : sp ? "↺ Neu" : "✨ Plan"}</button>
                                         </div>
                                         {sp && sp.phases && (
@@ -634,7 +639,7 @@ export default function App() {
                         <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.125rem" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                                 <button onClick={() => setCalDate(new Date(calDate.getFullYear(), calDate.getMonth() - 1, 1))} style={{ fontSize: 18, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-md)", cursor: "pointer", color: KL.acc, padding: "4px 12px" }}>‹</button>
-                                <p style={{ fontSize: 15, fontWeight: 700, margin: 0, textTransform: "capitalize", ...gTxt("#818cf8", "#818cf8") }}>{title}</p>
+                                <p style={{ fontSize: 15, fontWeight: 700, margin: 0, textTransform: "capitalize", ...gTxt(tokens.colors.tab.calendar, tokens.colors.tab.calendar) }}>{title}</p>
                                 <button onClick={() => setCalDate(new Date(calDate.getFullYear(), calDate.getMonth() + 1, 1))} style={{ fontSize: 18, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-md)", cursor: "pointer", color: KL.acc, padding: "4px 12px" }}>›</button>
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
@@ -653,7 +658,7 @@ export default function App() {
                                         <div key={i} style={{ minHeight: 56, padding: "5px 5px 4px", borderRadius: "var(--border-radius-md)", background: isToday ? `${KL.acc}20` : "var(--color-background-secondary)", border: isToday ? `0.5px solid ${KL.acc}` : "0.5px solid transparent", display: "flex", flexDirection: "column", position: "relative" }}>
                                             <span style={{ fontSize: 11, fontWeight: isToday ? 800 : 600, color: isToday ? KL.acc : "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>{d.getDate()}</span>
                                             <div style={{ display: "flex", flexDirection: "column", gap: 1, marginTop: 2 }}>
-                                                {exam && <div style={{ fontSize: 8, fontWeight: 700, color: "#c026d3", background: "rgba(192,38,211,0.15)", padding: "1px 3px", borderRadius: 3, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>🎯 {exam.name.split(" ")[0]}</div>}
+                                                {exam && <div style={{ fontSize: 8, fontWeight: 700, color: tokens.colors.accent.DEFAULT, background: tokens.colors.accent.soft, padding: "1px 3px", borderRadius: 3, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>🎯 {exam.name.split(" ")[0]}</div>}
                                                 {courses.length > 0 && <div style={{ fontSize: 8, fontWeight: 700, color: UN.acc, background: UN.bg, padding: "1px 3px", borderRadius: 3, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>📚 {courses.length}x</div>}
                                                 {hasRun && <div style={{ fontSize: 8, fontWeight: 700, color: SP.acc, background: SP.bg, padding: "1px 3px", borderRadius: 3 }}>🏃 {weekRuns[ds]}m</div>}
                                             </div>
@@ -663,7 +668,7 @@ export default function App() {
                                 })}
                             </div>
                             <div style={{ display: "flex", gap: 14, justifyContent: "center", marginTop: 14, flexWrap: "wrap" }}>
-                                {[["🎯", "Klausur", "#c026d3"], ["📚", "Vorlesung", UN.acc], ["🏃", "Lauf", SP.acc], ["😴", "Schlaf", BD.acc]].map(([em, l, c]) => (<div key={l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "var(--color-text-tertiary)" }}><span>{em}</span><span style={{ color: c, fontWeight: 600 }}>{l}</span></div>))}
+                                {[["🎯", "Klausur", SP.acc], ["📚", "Vorlesung", UN.acc], ["🏃", "Lauf", SP.acc], ["😴", "Schlaf", BD.acc]].map(([em, l, c]) => (<div key={l} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "var(--color-text-tertiary)" }}><span>{em}</span><span style={{ color: c, fontWeight: 600 }}>{l}</span></div>))}
                             </div>
                         </div>
                     </div>

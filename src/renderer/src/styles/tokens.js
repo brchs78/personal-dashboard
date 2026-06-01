@@ -1,85 +1,76 @@
 // OLE OS — Design System Tokens
-// Stil: Premium Glassmorphism (Apple Fitness / macOS Sequoia / visionOS)
-// Palette: Navy + Gold
+// Stil: Claude-inspired warm light theme
+// Palette: Warm Cream + Coral accent
 //
 // CommonJS-Export, damit dieselbe Quelle sowohl im Renderer (Vite-CJS-Interop)
 // als auch in `tailwind.config.js` per require() nutzbar ist.
-//
-// Verwendung im Renderer:
-//   import tokens from "./styles/tokens";
-//   <div style={tokens.glass.card} />
-//   <div style={{ color: tokens.colors.accent.DEFAULT }} />
-//
-// Optionale Tailwind-Anbindung (nicht Teil dieses Tasks):
-//   const tokens = require("./src/renderer/src/styles/tokens");
-//   module.exports = { theme: { extend: { colors: tokens.colors, ... } } }
 
 // ──────────────────────────────────────────────────────────────────
 // COLORS
 // ──────────────────────────────────────────────────────────────────
 const colors = {
-  // Page-Backgrounds (Layered Deep Navy)
+  // Page-Backgrounds (Warm Cream)
   bg: {
-    base: "#0a0d1a",        // sehr dunkles Navy — Page-Background
-    elevated: "#11142a",    // leicht angehoben — Sidebar, Header-Bar
-    sunken: "#05070f",      // tiefer — Backdrop unter Modals
+    base: "#faf9f5",        // warmes Cream — Page-Background
+    elevated: "#ffffff",    // weiße Cards
+    sunken: "#f3efe7",      // Drawer, Sidebar, Inputs
   },
 
-  // Glassmorphism-Surfaces (auf bg.base)
+  // Card-Surfaces (soft white)
   surface: {
-    glass: "rgba(255,255,255,0.05)",         // Standard-Karte
-    glassHover: "rgba(255,255,255,0.08)",    // Hover-State
-    glassActive: "rgba(255,255,255,0.10)",   // Selected / Pressed
-    glassStrong: "rgba(255,255,255,0.12)",   // Modal, Floating Toolbar
+    glass: "rgba(255,255,255,0.80)",
+    glassHover: "rgba(255,255,255,0.92)",
+    glassActive: "rgba(255,255,255,1.0)",
+    glassStrong: "rgba(255,255,255,0.95)",
   },
 
-  // Accent — Magenta (Primary) + Indigo (Secondary)
+  // Accent — Coral (Primary) + Warm Taupe (Secondary)
   accent: {
-    DEFAULT: "#c026d3",                       // Primary Magenta
-    hover: "#d33ee5",                         // Hover etwas heller
-    pressed: "#a31bb2",                       // Pressed etwas dunkler
-    soft: "rgba(192,38,211,0.12)",            // Background-Tint
-    softer: "rgba(192,38,211,0.06)",          // Sehr dezent (Hover-Tint)
-    border: "rgba(199,26,211,0.20)",          // Border für Accent-Karten
-    glow: "rgba(192,38,211,0.40)",            // Shadow-Glow
-    secondary: "#6366f1",                     // Secondary Indigo
-    secondaryHover: "#7c7ff3",
-    secondarySoft: "rgba(99,102,241,0.12)",
-    gradient: "linear-gradient(135deg,#c026d3,#6366f1)",        // Magenta → Indigo
-    gradientSoft: "linear-gradient(135deg,rgba(192,38,211,0.12),rgba(99,102,241,0.12))",
+    DEFAULT: "#cc785c",                        // Primary Coral
+    hover: "#b8654a",                          // Hover dunkler
+    pressed: "#a5573f",                        // Pressed
+    soft: "rgba(204,120,92,0.12)",             // Background-Tint
+    softer: "rgba(204,120,92,0.06)",           // Sehr dezent
+    border: "rgba(204,120,92,0.25)",           // Border für Accent-Karten
+    glow: "rgba(204,120,92,0.30)",             // Shadow-Glow
+    secondary: "#8b7355",                      // Secondary warm Taupe
+    secondaryHover: "#7a6347",
+    secondarySoft: "rgba(139,115,85,0.10)",
+    gradient: "linear-gradient(135deg,#cc785c,#d4a27f)",          // Coral → Sand
+    gradientSoft: "linear-gradient(135deg,rgba(204,120,92,0.12),rgba(212,162,127,0.12))",
   },
 
-  // Text
+  // Text (warm dark)
   text: {
-    primary: "#ffffff",                       // Headlines, Hero-Zahlen
-    secondary: "rgba(255,255,255,0.60)",      // Body, Sublabels
-    tertiary: "rgba(255,255,255,0.40)",       // Captions, Metadata
-    disabled: "rgba(255,255,255,0.25)",       // Disabled
-    inverse: "#0a0d1a",                       // Text auf Accent-CTA
+    primary: "#3d3929",                        // Headlines, Body
+    secondary: "rgba(61,57,41,0.60)",          // Sublabels
+    tertiary: "rgba(61,57,41,0.40)",           // Captions, Metadata
+    disabled: "rgba(61,57,41,0.25)",           // Disabled
+    inverse: "#ffffff",                        // Text auf Accent-CTA
   },
 
-  // Borders
+  // Borders (warm)
   border: {
-    glass: "rgba(255,255,255,0.10)",          // Standard Glassmorphism-Border
-    glassHover: "rgba(255,255,255,0.15)",
-    subtle: "rgba(255,255,255,0.06)",         // Dividers
-    strong: "rgba(255,255,255,0.20)",         // Hervorgehobene Trennlinie
+    glass: "rgba(61,57,41,0.10)",
+    glassHover: "rgba(61,57,41,0.16)",
+    subtle: "rgba(61,57,41,0.06)",
+    strong: "rgba(61,57,41,0.20)",
   },
 
   // Semantic / Status
   status: {
-    success: "#34d399",
-    warning: "#fbbf24",
-    danger: "#f87171",
-    info: "#60a5fa",
+    success: "#5a8a5e",
+    warning: "#b8860b",
+    danger: "#c44536",
+    info: "#4a7fb5",
   },
 
-  // Tab-Akzente (Workout/Body/Uni/Kalender) — Magenta-Indigo Spektrum
+  // Tab-Akzente (warm, abgestimmt)
   tab: {
-    workout: "#c026d3",     // Magenta
-    body: "#a855f7",        // Violet
-    uni: "#6366f1",         // Indigo
-    calendar: "#818cf8",    // Light Indigo
+    workout: "#cc785c",     // Coral
+    body: "#a67c5a",        // Bronze
+    uni: "#8b7355",         // Taupe
+    calendar: "#7a6b56",    // Olive
   },
 };
 
@@ -87,36 +78,37 @@ const colors = {
 // BORDER RADIUS
 // ──────────────────────────────────────────────────────────────────
 const radius = {
-  sm: "8px",                // Tags, kleine Pills
-  md: "12px",               // Buttons, Inputs
-  lg: "16px",               // Karten (Standard)
-  xl: "20px",               // Modals, große Surfaces
-  "2xl": "24px",            // Hero-Karten
-  full: "9999px",           // Pills, Avatars, Toggle-Switches
+  sm: "10px",
+  md: "14px",
+  lg: "20px",
+  xl: "28px",
+  "2xl": "32px",
+  pill: "999px",
+  full: "9999px",
 };
 
 // ──────────────────────────────────────────────────────────────────
-// BLUR (für backdrop-filter)
+// BLUR (für backdrop-filter — weniger nötig im Light-Theme)
 // ──────────────────────────────────────────────────────────────────
 const blur = {
   sm: "10px",
   md: "16px",
-  lg: "20px",               // Standard Glassmorphism-Karte
-  xl: "28px",               // Modals, starke Trennung
-  "2xl": "40px",            // Sehr starke Hintergrund-Unschärfe
+  lg: "20px",
+  xl: "28px",
+  "2xl": "40px",
 };
 
 // ──────────────────────────────────────────────────────────────────
-// SHADOWS (Premium — Schwarz weich + Highlight on top)
+// SHADOWS (Warm, weich)
 // ──────────────────────────────────────────────────────────────────
 const shadow = {
-  sm: "0 2px 8px rgba(0,0,0,0.20)",
-  card: "0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
-  cardHover: "0 12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)",
-  elevated: "0 16px 48px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.08)",
-  modal: "0 24px 64px rgba(0,0,0,0.60), inset 0 1px 0 rgba(255,255,255,0.10)",
-  glow: "0 0 20px rgba(192,38,211,0.25)",        // Magenta-Glow (CTA)
-  glowStrong: "0 0 32px rgba(192,38,211,0.40)",  // Magenta-Glow (Hover/Active CTA)
+  sm: "0 1px 3px rgba(61,57,41,0.06)",
+  card: "0 1px 2px rgba(61,57,41,0.04), 0 4px 12px rgba(61,57,41,0.06)",
+  cardHover: "0 2px 4px rgba(61,57,41,0.06), 0 8px 24px rgba(61,57,41,0.08)",
+  elevated: "0 4px 16px rgba(61,57,41,0.08), 0 12px 32px rgba(61,57,41,0.06)",
+  modal: "0 8px 32px rgba(61,57,41,0.12), 0 24px 64px rgba(61,57,41,0.08)",
+  glow: "0 2px 12px rgba(204,120,92,0.25)",
+  glowStrong: "0 4px 20px rgba(204,120,92,0.35)",
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -135,7 +127,7 @@ const spacing = {
 };
 
 // ──────────────────────────────────────────────────────────────────
-// TYPOGRAPHY (Apple-Native-Stack)
+// TYPOGRAPHY (Space Grotesk + Newsreader)
 // ──────────────────────────────────────────────────────────────────
 const typography = {
   fontFamily: {
@@ -153,8 +145,8 @@ const typography = {
     xl: "20px",
     "2xl": "24px",
     "3xl": "32px",
-    "4xl": "44px",          // Hero-Zahlen (z. B. Marathon-Countdown)
-    "5xl": "56px",          // Display
+    "4xl": "44px",
+    "5xl": "56px",
   },
   fontWeight: {
     regular: 400,
@@ -164,10 +156,10 @@ const typography = {
   },
   letterSpacing: {
     tighter: "-0.03em",
-    tight: "-0.02em",       // Headlines
+    tight: "-0.02em",
     normal: "0",
-    wide: "0.05em",         // Uppercase Labels
-    wider: "0.08em",        // Hero Labels
+    wide: "0.05em",
+    wider: "0.08em",
   },
   lineHeight: {
     tight: 1.1,
@@ -182,9 +174,9 @@ const typography = {
 // ──────────────────────────────────────────────────────────────────
 const motion = {
   ease: {
-    standard: [0.4, 0, 0.2, 1],     // Material Standard
-    out: [0, 0, 0.2, 1],            // Decelerate
-    in: [0.4, 0, 1, 1],             // Accelerate
+    standard: [0.4, 0, 0.2, 1],
+    out: [0, 0, 0.2, 1],
+    in: [0.4, 0, 1, 1],
     inOut: [0.4, 0, 0.2, 1],
   },
   spring: {
@@ -201,74 +193,55 @@ const motion = {
 };
 
 // ──────────────────────────────────────────────────────────────────
-// GLASSMORPHISM-PRESETS (fertige Style-Objekte für JSX `style={{}}`)
+// CARD & COMPONENT PRESETS (fertige Style-Objekte)
 // ──────────────────────────────────────────────────────────────────
 const glass = {
-  // Standard-Karte (Dashboard-Boxen)
   card: {
-    background: colors.surface.glass,
-    backdropFilter: "blur(20px) saturate(140%)",
-    WebkitBackdropFilter: "blur(20px) saturate(140%)",
+    background: colors.bg.elevated,
     border: `1px solid ${colors.border.glass}`,
     borderRadius: radius.lg,
     boxShadow: shadow.card,
   },
 
-  // Hover-Variante (z. B. interaktive Karte)
   cardHover: {
-    background: colors.surface.glassHover,
-    backdropFilter: "blur(20px) saturate(140%)",
-    WebkitBackdropFilter: "blur(20px) saturate(140%)",
+    background: colors.bg.elevated,
     border: `1px solid ${colors.border.glassHover}`,
     borderRadius: radius.lg,
     boxShadow: shadow.cardHover,
   },
 
-  // Stärkere Karte für Modals/Floating-Elemente
   cardStrong: {
-    background: colors.surface.glassStrong,
-    backdropFilter: "blur(28px) saturate(160%)",
-    WebkitBackdropFilter: "blur(28px) saturate(160%)",
+    background: colors.bg.elevated,
     border: `1px solid ${colors.border.glassHover}`,
     borderRadius: radius.xl,
     boxShadow: shadow.elevated,
   },
 
-  // Modal (z. B. Settings-Overlay)
   modal: {
-    background: colors.surface.glassStrong,
-    backdropFilter: "blur(40px) saturate(180%)",
-    WebkitBackdropFilter: "blur(40px) saturate(180%)",
+    background: colors.bg.elevated,
     border: `1px solid ${colors.border.strong}`,
     borderRadius: radius.xl,
     boxShadow: shadow.modal,
   },
 
-  // Sekundär-Button (Glas-Button)
   button: {
-    background: colors.surface.glass,
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
+    background: colors.bg.sunken,
     border: `1px solid ${colors.border.glass}`,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     color: colors.text.primary,
   },
 
-  // Primary CTA (Gold)
   buttonAccent: {
     background: colors.accent.DEFAULT,
-    border: `1px solid ${colors.accent.hover}`,
-    borderRadius: radius.md,
+    border: "none",
+    borderRadius: radius.pill,
     color: colors.text.inverse,
     boxShadow: shadow.glow,
     fontWeight: typography.fontWeight.semibold,
   },
 
-  // Input
   input: {
-    background: "rgba(255,255,255,0.04)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
+    background: colors.bg.sunken,
     border: `1px solid ${colors.border.glass}`,
     borderRadius: radius.md,
     color: colors.text.primary,
