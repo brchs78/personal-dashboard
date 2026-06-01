@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('oleAPI', {
         getCurrent: () => ipcRenderer.invoke('plan:get-current'),
         generate:   (opts) => ipcRenderer.invoke('plan:generate', opts),
         markDone:   (date, done) => ipcRenderer.invoke('plan:mark-done', { date, done }),
+        updateDay:  (date, patch) => ipcRenderer.invoke('plan:update-day', { date, patch }),
         clear:      () => ipcRenderer.invoke('plan:clear'),
         onUpdated:  (cb) => ipcRenderer.on('plan:updated', (_e, payload) => cb(payload)),
         onDoneUpdated: (cb) => ipcRenderer.on('plan:done-updated', (_e, payload) => cb(payload)),

@@ -54,11 +54,17 @@ export function useTrainingPlan() {
         setDone(map || {});
     }, [done]);
 
+    const updateDay = useCallback(async (date, patch) => {
+        const a = api(); if (!a) return;
+        const next = await a.updateDay(date, patch);
+        setPlan(next);
+    }, []);
+
     const clear = useCallback(async () => {
         const a = api(); if (!a) return;
         await a.clear();
         setPlan(null);
     }, []);
 
-    return { plan, done, busy, error, generate, toggleDone, clear, refresh };
+    return { plan, done, busy, error, generate, toggleDone, updateDay, clear, refresh };
 }

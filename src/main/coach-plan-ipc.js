@@ -46,6 +46,14 @@ function init(getWindow, { getHealthSummary, getHealthTrend } = {}) {
         return map;
     });
 
+    ipcMain.handle('plan:update-day', (_e, { date, patch } = {}) => {
+        if (!date) throw new Error('missing_date');
+        const plan = store.updateDay(date, patch || {});
+        if (!plan) throw new Error('day_not_found');
+        broadcast(getWindow(), 'plan:updated', { plan });
+        return plan;
+    });
+
     ipcMain.handle('plan:clear', () => {
         store.clear();
         broadcast(getWindow(), 'plan:updated', { plan: null });

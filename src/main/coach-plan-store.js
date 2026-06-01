@@ -50,8 +50,20 @@ function getDone() {
     return loadAll().done || {};
 }
 
+function updateDay(date, patch) {
+    const all = loadAll();
+    if (!all.current?.days) return null;
+    const idx = all.current.days.findIndex((d) => d.date === date);
+    if (idx < 0) return null;
+    const allowed = ['type', 'title', 'distanceKm', 'durationMin', 'paceTarget', 'hrZone', 'notes'];
+    const safe = Object.fromEntries(Object.entries(patch).filter(([k]) => allowed.includes(k)));
+    all.current.days[idx] = { ...all.current.days[idx], ...safe };
+    saveAll(all);
+    return all.current;
+}
+
 function clear() {
     try { fs.unlinkSync(planPath()); } catch {}
 }
 
-module.exports = { loadCurrent, saveCurrent, markDone, getDone, clear };
+module.exports = { loadCurrent, saveCurrent, markDone, getDone, updateDay, clear };

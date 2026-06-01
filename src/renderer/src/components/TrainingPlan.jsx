@@ -1,7 +1,9 @@
 // OLE OS — KI-Trainingsplan (Wochenansicht Mo-So)
 // Generiert via Anthropic API in main-process auf Basis von Health + Strava.
 
-import { Sparkles, RefreshCw, CheckCircle2, Circle, Calendar, Flame, Moon } from 'lucide-react';
+import { useState } from 'react';
+import { Sparkles, RefreshCw, CheckCircle2, Circle, Calendar, Flame, Moon, Pencil, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useTrainingPlan } from '../hooks/useTrainingPlan';
 import tokens from '../styles/tokens';
 
@@ -19,7 +21,8 @@ const TYPE_COLOR = {
 };
 
 export default function TrainingPlan() {
-    const { plan, done, busy, error, generate, toggleDone } = useTrainingPlan();
+    const { plan, done, busy, error, generate, toggleDone, updateDay } = useTrainingPlan();
+    const [editing, setEditing] = useState(null); // day object or null
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.lg, padding: tokens.spacing.lg }}>
@@ -30,10 +33,22 @@ export default function TrainingPlan() {
             {plan && (
                 <>
                     <WeekSummary plan={plan} done={done} />
-                    <DaysList plan={plan} done={done} onToggle={toggleDone} />
+                    <DaysList plan={plan} done={done} onToggle={toggleDone} onEdit={setEditing} />
                     <PhaseExplainer phase={plan.phase} />
                 </>
             )}
+            <AnimatePresence>
+                {editing && (
+                    <DayEditModal
+                        day={editing}
+                        onClose={() => setEditing(null)}
+                        onSave={async (patch) => {
+                            await updateDay(editing.date, patch);
+                            setEditing(null);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }
@@ -193,20 +208,24 @@ function SummaryStat({ icon: Icon, label, value }) {
     );
 }
 
-function DaysList({ plan, done, onToggle }) {
+function DaysList({ plan, done, onToggle, onEdit }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm }}>
             {(plan.days || []).map((d) => (
-                <DayCard key={d.date} day={d} isDone={!!done[d.date]} onToggle={() => onToggle(d.date)} />
+                <DayCard key={d.date} day={d} isDone={!!done[d.date]} onToggle={() => onToggle(d.date)} onEdit={() => onEdit(d)} />
             ))}
         </div>
     );
 }
 
-function DayCard({ day, isDone, onToggle }) {
+function DayCard({ day, isDone, onToggle, onEdit }) {
+    const [hovered, setHovered] = useState(false);
     const accent = TYPE_COLOR[day.type] || tokens.colors.accent.DEFAULT;
     return (
-        <div style={{
+        <div
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
             ...tokens.glass.card,
             padding: tokens.spacing.md,
             display: 'grid',
@@ -215,6 +234,7 @@ function DayCard({ day, isDone, onToggle }) {
             alignItems: 'center',
             opacity: isDone ? 0.55 : 1,
             borderLeft: `3px solid ${accent}`,
+            position: 'relative',
         }}>
             <button onClick={onToggle} type="button" style={{
                 background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
@@ -282,6 +302,27 @@ function DayCard({ day, isDone, onToggle }) {
                     }}>{day.hrZone}</span>
                 )}
             </div>
+            {hovered && (
+                <button
+                    onClick={onEdit}
+                    title="Tag bearbeiten"
+                    style={{
+                        position: 'absolute',
+                        top: 8, right: 8,
+                        width: 26, height: 26,
+                        borderRadius: tokens.radius.sm,
+                        border: `1px solid ${tokens.colors.border.glass}`,
+                        background: tokens.colors.surface.glass,
+                        color: tokens.colors.text.tertiary,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <Pencil size={13} />
+                </button>
+            )}
         </div>
     );
 }
@@ -347,6 +388,109 @@ function PhaseExplainer({ phase }) {
             </div>
         </div>
     );
+}
+
+const ALL_TYPES = ['Easy','Long','Tempo','Threshold','Intervals','Recovery','Cross','Rest','Yoga+Easy','Gym+Easy'];
+
+function DayEditModal({ day, onClose, onSave }) {
+    const [type, setType] = useState(day.type || 'Easy');
+    const [title, setTitle] = useState(day.title || '');
+    const [distanceKm, setDistanceKm] = useState(day.distanceKm != null ? String(day.distanceKm) : '');
+    const [paceTarget, setPaceTarget] = useState(day.paceTarget || '');
+    const [hrZone, setHrZone] = useState(day.hrZone || '');
+    const [notes, setNotes] = useState(day.notes || '');
+
+    function save() {
+        const patch = { type, title, paceTarget, hrZone: hrZone || null, notes };
+        const km = parseFloat(distanceKm);
+        patch.distanceKm = isNaN(km) ? null : km;
+        onSave(patch);
+    }
+
+    return (
+        <>
+            <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={onClose}
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', zIndex: 950 }}
+            />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                style={{
+                    position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+                    width: 380, maxWidth: '92vw',
+                    ...tokens.glass.modal,
+                    padding: 20, zIndex: 951,
+                }}
+            >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <div style={{ fontSize: tokens.typography.fontSize.lg, fontWeight: 700, color: tokens.colors.text.primary }}>
+                        {day.dayLabel} · {fmtDate(day.date)}
+                    </div>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tokens.colors.text.secondary, padding: 4 }}>
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <label style={labelStyle()}>Typ</label>
+                <select value={type} onChange={(e) => setType(e.target.value)} style={inputStyle()}>
+                    {ALL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+
+                <label style={{ ...labelStyle(), marginTop: 10 }}>Titel</label>
+                <input value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle()} placeholder="z.B. Easy 10km Zone 2" />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
+                    <div>
+                        <label style={labelStyle()}>Distanz (km)</label>
+                        <input type="number" value={distanceKm} onChange={(e) => setDistanceKm(e.target.value)}
+                            placeholder="optional" style={inputStyle()} />
+                    </div>
+                    <div>
+                        <label style={labelStyle()}>HR-Zone</label>
+                        <select value={hrZone} onChange={(e) => setHrZone(e.target.value)} style={inputStyle()}>
+                            <option value="">–</option>
+                            {['Z1','Z2','Z3','Z4','Z5'].map((z) => <option key={z} value={z}>{z}</option>)}
+                        </select>
+                    </div>
+                </div>
+
+                <label style={{ ...labelStyle(), marginTop: 10 }}>Pace-Ziel</label>
+                <input value={paceTarget} onChange={(e) => setPaceTarget(e.target.value)}
+                    placeholder="5:20–5:40/km" style={inputStyle()} />
+
+                <label style={{ ...labelStyle(), marginTop: 10 }}>Notizen</label>
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+                    rows={2} style={{ ...inputStyle(), resize: 'vertical' }} />
+
+                <button onClick={save} style={{
+                    ...tokens.glass.buttonAccent, marginTop: 16, width: '100%',
+                    padding: '10px 14px', cursor: 'pointer',
+                }}>
+                    Speichern
+                </button>
+            </motion.div>
+        </>
+    );
+}
+
+function inputStyle() {
+    return {
+        ...tokens.glass.input,
+        width: '100%', padding: '8px 10px', fontSize: 13,
+        outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+    };
+}
+
+function labelStyle() {
+    return {
+        display: 'block', fontSize: 10, textTransform: 'uppercase',
+        letterSpacing: '0.1em', color: tokens.colors.text.tertiary,
+        marginBottom: 4, fontWeight: 600,
+    };
 }
 
 function fmtDate(iso) {
