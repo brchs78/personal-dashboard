@@ -10,6 +10,7 @@ function api() {
 export function useCalendar() {
     const [events, setEvents] = useState([]);
     const [subscriptions, setSubscriptions] = useState([]);
+    const [caldav, setCaldav] = useState({ connected: false });
     const [ready, setReady] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
@@ -20,11 +21,13 @@ export function useCalendar() {
         a.list().then((data) => {
             setEvents(data?.events || []);
             setSubscriptions(data?.subscriptions || []);
+            setCaldav(data?.caldav || { connected: false });
             setReady(true);
         });
         a.onUpdated((data) => {
             setEvents(data?.events || []);
             setSubscriptions(data?.subscriptions || []);
+            if (data?.caldav) setCaldav(data.caldav);
         });
     }, []);
 
@@ -69,21 +72,65 @@ export function useCalendar() {
         return a.addInternal(partial);
     }, []);
 
-    const updateEvent = useCallback(async (id, patch) => {
+    // event optional: für CalDAV-Events das vollständige Objekt mitgeben (url+etag).
+    const updateEvent = useCallback(async (id, patch, event) => {
         const a = api();
         if (!a) return;
-        return a.updateInternal(id, patch);
+        return a.updateInternal(id, patch, event);
     }, []);
 
-    const deleteEvent = useCallback(async (id) => {
+    // CalDAV-Events: ganzes Objekt übergeben; internal: ID-String.
+    const deleteEvent = useCallback(async (idOrEvent) => {
         const a = api();
         if (!a) return;
-        return a.deleteInternal(id);
+        return a.deleteInternal(idOrEvent);
+    }, []);
+
+    // ── CalDAV (iCloud) ────────────────────────────────────────────
+    const caldavConnect = useCallback(async ({ appleId, password }) => {
+        const a = api();
+        if (!a?.caldav) return;
+        setBusy(true);
+        setError(null);
+        try {
+            const status = await a.caldav.connect({ appleId, password });
+            setCaldav(status);
+            return status;
+        } catch (e) {
+            setError(String(e?.message || e));
+            throw e;
+        } finally {
+            setBusy(false);
+        }
+    }, []);
+
+    const caldavDisconnect = useCallback(async () => {
+        const a = api();
+        if (!a?.caldav) return;
+        await a.caldav.disconnect();
+        setCaldav({ connected: false });
+    }, []);
+
+    const caldavSetVisible = useCallback(async (urls) => {
+        const a = api();
+        if (!a?.caldav) return;
+        const status = await a.caldav.setVisible(urls);
+        setCaldav(status);
+        return status;
+    }, []);
+
+    const caldavSetTarget = useCallback(async (url) => {
+        const a = api();
+        if (!a?.caldav) return;
+        const status = await a.caldav.setTarget(url);
+        setCaldav(status);
+        return status;
     }, []);
 
     return {
         events,
         subscriptions,
+        caldav,
         ready,
         busy,
         error,
@@ -93,5 +140,9 @@ export function useCalendar() {
         addEvent,
         updateEvent,
         deleteEvent,
+        caldavConnect,
+        caldavDisconnect,
+        caldavSetVisible,
+        caldavSetTarget,
     };
 }

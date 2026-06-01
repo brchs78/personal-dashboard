@@ -8,6 +8,7 @@ const path = require('path');
 const { chat } = require('./coach-chat.js');
 const todoStore = require('./todo-store.js');
 const calendarStore = require('./calendar-store.js');
+const { getSync } = require('./calendar-ipc.js');
 
 function broadcast(win, channel, payload) {
     if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
@@ -58,7 +59,12 @@ function init(getWindow, { getHealthSummary } = {}) {
             broadcastCalendar: () => broadcast(getWindow(), 'calendar:updated', {
                 subscriptions: calendarStore.loadSubscriptions(),
                 events: calendarStore.loadAllEvents(),
+                caldav: calendarStore.loadCalDAVAccount(),
             }),
+            refreshCalendar: async () => {
+                const sync = getSync?.();
+                if (sync) await sync.refreshCalDAV();
+            },
             onToolEvent: (ev) => broadcast(getWindow(), 'coach:tool-event', ev),
         };
         try {

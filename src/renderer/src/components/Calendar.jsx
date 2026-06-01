@@ -62,7 +62,7 @@ function subColor(ev) {
     if (ev.source === "internal") {
         return { fill: "rgba(192,38,211,0.18)", border: "#c026d3", accent: "#c026d3" };
     }
-    const hue = hueFor(ev.sourceUrl || ev.sourceId || "");
+    const hue = hueFor(ev.caldav?.calendarUrl || ev.sourceUrl || ev.sourceId || ev.sourceLabel || "");
     return {
         fill: `hsla(${hue}, 70%, 55%, 0.18)`,
         border: `hsl(${hue}, 70%, 60%)`,
@@ -249,7 +249,7 @@ export default function Calendar() {
                                     onMouseEnter={() => setHover(ev.id)}
                                     onMouseLeave={() => setHover(null)}
                                     onEdit={() => setEditing(ev)}
-                                    onDelete={(id) => cal.deleteEvent(id)}
+                                    onDelete={(event) => cal.deleteEvent(event.source === "caldav" ? event : event.id)}
                                 />
                             ))}
                         </div>
@@ -292,7 +292,7 @@ export default function Calendar() {
                         existing={editing}
                         onClose={() => { setShowAdd(false); setEditing(null); }}
                         onSave={async (data) => {
-                            if (editing) await cal.updateEvent(editing.id, data);
+                            if (editing) await cal.updateEvent(editing.id, data, editing);
                             else await cal.addEvent(data);
                             setShowAdd(false);
                             setEditing(null);
@@ -315,7 +315,7 @@ function EventBlock({ ev, hover, onMouseEnter, onMouseLeave, onEdit, onDelete })
     const durationMin = Math.max(20, endMin - startMin);
     const height = (durationMin / 60) * HOUR_HEIGHT;
     const colors = subColor(ev);
-    const isInternal = ev.source === "internal";
+    const isWritable = !!ev.writable;
 
     return (
         <motion.div
@@ -335,11 +335,11 @@ function EventBlock({ ev, hover, onMouseEnter, onMouseLeave, onEdit, onDelete })
                 fontSize: 11,
                 color: tokens.colors.text.primary,
                 overflow: "hidden",
-                cursor: isInternal ? "pointer" : "default",
+                cursor: isWritable ? "pointer" : "default",
                 zIndex: hover ? 50 : 1,
                 boxShadow: hover ? tokens.shadow.elevated : "none",
             }}
-            onClick={() => { if (isInternal) onEdit(); }}
+            onClick={() => { if (isWritable) onEdit(); }}
             title={`${ev.title}\n${fmtTime(start)}–${fmtTime(end)}${ev.location ? `\n${ev.location}` : ""}`}
         >
             <div style={{
@@ -360,9 +360,9 @@ function EventBlock({ ev, hover, onMouseEnter, onMouseLeave, onEdit, onDelete })
                 {fmtTime(start)}
             </div>
 
-            {hover && isInternal && (
+            {hover && isWritable && (
                 <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(ev.id); }}
+                    onClick={(e) => { e.stopPropagation(); onDelete(ev); }}
                     style={{
                         position: "absolute",
                         top: 2, right: 2,
@@ -479,6 +479,9 @@ function SubsDrawer({ cal, onClose }) {
                     </button>
                 </div>
 
+                {/* iCloud CalDAV (Two-Way) */}
+                <CalDAVSection cal={cal} />
+
                 {/* Bestehende Subs */}
                 {cal.subscriptions.length === 0 ? (
                     <div style={{
@@ -581,6 +584,177 @@ function SubsDrawer({ cal, onClose }) {
                 </div>
             </motion.div>
         </>
+    );
+}
+
+// ── iCloud CalDAV Section ─────────────────────────────────────────
+function CalDAVSection({ cal }) {
+    const dav = cal.caldav || { connected: false };
+    const [appleId, setAppleId] = useState("");
+    const [password, setPassword] = useState("");
+    const [connecting, setConnecting] = useState(false);
+    const [err, setErr] = useState(null);
+
+    async function connect() {
+        if (!appleId.trim() || !password.trim()) return;
+        setConnecting(true);
+        setErr(null);
+        try {
+            await cal.caldavConnect({ appleId: appleId.trim(), password: password.trim() });
+            setPassword("");
+        } catch (e) {
+            setErr(String(e?.message || e));
+        } finally {
+            setConnecting(false);
+        }
+    }
+
+    function toggleVisible(url) {
+        const cur = new Set(dav.selectedCalendars || []);
+        if (cur.has(url)) cur.delete(url);
+        else cur.add(url);
+        cal.caldavSetVisible([...cur]);
+    }
+
+    return (
+        <div style={{
+            marginBottom: 24, padding: 12,
+            background: tokens.colors.surface.glass,
+            border: `1px solid ${tokens.colors.border.glass}`,
+            borderRadius: tokens.radius.md,
+        }}>
+            <div style={{
+                fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em",
+                color: tokens.colors.text.tertiary, marginBottom: 8,
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+            }}>
+                <span>iCloud · Two-Way</span>
+                {dav.connected && (
+                    <span style={{
+                        fontSize: 9, color: "#34d399",
+                        textTransform: "none", letterSpacing: 0,
+                    }}>
+                        ● verbunden
+                    </span>
+                )}
+            </div>
+
+            {!dav.connected ? (
+                <>
+                    <input
+                        value={appleId}
+                        onChange={(e) => setAppleId(e.target.value)}
+                        placeholder="Apple-ID (E-Mail)"
+                        style={inputStyle()}
+                    />
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="App-spezifisches Passwort"
+                        style={{ ...inputStyle(), marginTop: 8 }}
+                    />
+                    {err && (
+                        <div style={{
+                            fontSize: 11, color: "#f87171", marginTop: 6, padding: 6,
+                            background: "rgba(248,113,113,0.1)", borderRadius: 6,
+                        }}>
+                            {err}
+                        </div>
+                    )}
+                    <button
+                        onClick={connect}
+                        disabled={connecting || !appleId.trim() || !password.trim()}
+                        style={{
+                            ...tokens.glass.buttonAccent,
+                            marginTop: 10, width: "100%", padding: "10px 14px",
+                            cursor: connecting ? "wait" : "pointer",
+                            opacity: !appleId.trim() || !password.trim() ? 0.5 : 1,
+                            fontSize: 13,
+                        }}
+                    >
+                        {connecting ? "Verbinde..." : "iCloud verbinden"}
+                    </button>
+                    <div style={{
+                        fontSize: 10, color: tokens.colors.text.tertiary,
+                        marginTop: 8, lineHeight: 1.5,
+                    }}>
+                        App-Passwort erstellen auf <b>appleid.apple.com</b> → Anmeldung & Sicherheit → App-spezifische Passwörter. Wird verschlüsselt im macOS-Schlüsselbund gespeichert.
+                    </div>
+                </>
+            ) : (
+                <>
+                    <div style={{
+                        fontSize: 11, color: tokens.colors.text.secondary, marginBottom: 8,
+                    }}>
+                        {dav.appleId}
+                    </div>
+
+                    {/* Kalender-Checkboxen */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
+                        {(dav.calendars || []).map((c) => {
+                            const visible = (dav.selectedCalendars || []).includes(c.url);
+                            const isTarget = dav.targetCalendarUrl === c.url;
+                            return (
+                                <div key={c.url} style={{
+                                    display: "flex", alignItems: "center", gap: 8,
+                                    fontSize: 12, color: tokens.colors.text.primary,
+                                }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={visible}
+                                        onChange={() => toggleVisible(c.url)}
+                                        style={{ cursor: "pointer" }}
+                                    />
+                                    <span style={{
+                                        flex: 1, whiteSpace: "nowrap", overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                    }}>
+                                        {c.displayName}
+                                        {c.readOnly && (
+                                            <span style={{ color: tokens.colors.text.tertiary, fontSize: 10 }}> · read-only</span>
+                                        )}
+                                    </span>
+                                    {!c.readOnly && (
+                                        <button
+                                            onClick={() => cal.caldavSetTarget(isTarget ? null : c.url)}
+                                            title={isTarget ? "Schreib-Ziel" : "Als Schreib-Ziel setzen"}
+                                            style={{
+                                                fontSize: 9, padding: "2px 6px",
+                                                borderRadius: 4, cursor: "pointer",
+                                                border: `1px solid ${isTarget ? "#c026d3" : tokens.colors.border.glass}`,
+                                                background: isTarget ? "rgba(192,38,211,0.18)" : "transparent",
+                                                color: isTarget ? "#e879f9" : tokens.colors.text.tertiary,
+                                            }}
+                                        >
+                                            {isTarget ? "★ Ziel" : "Ziel"}
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {dav.lastError && (
+                        <div style={{ fontSize: 10, color: "#fbbf24", marginBottom: 8 }}>
+                            {String(dav.lastError).slice(0, 80)}
+                        </div>
+                    )}
+
+                    <button
+                        onClick={() => cal.caldavDisconnect()}
+                        style={{
+                            width: "100%", padding: "8px 12px", borderRadius: tokens.radius.md,
+                            background: "rgba(248,113,113,0.1)",
+                            border: "1px solid rgba(248,113,113,0.3)",
+                            color: "#f87171", cursor: "pointer", fontSize: 12,
+                        }}
+                    >
+                        iCloud trennen
+                    </button>
+                </>
+            )}
+        </div>
     );
 }
 

@@ -1,7 +1,8 @@
 // OLE OS — iCal Fetch & Expansion
 // Verwendet `node-ical` für HTTP-Fetch, RFC 5545 Parser, RRULE-Expansion,
 // EXDATE und RECURRENCE-ID Overrides. Schreibt `webcal://` zu `https://` um.
-// Liefert normalisierte Event-Objekte im OLE OS Format.
+// Die Expansion (`expandVEvents`) wird sowohl vom HTTP-Abo-Pfad als auch vom
+// CalDAV-Pfad (Roh-ICS-Strings) genutzt.
 
 const ical = require('node-ical');
 const crypto = require('crypto');
@@ -19,45 +20,19 @@ function safeDate(d) {
     }
 }
 
-function normalize(ev, { start, end, source, sub, override }) {
-    const o = override || {};
-    return {
-        id: `${sub.id}:${ev.uid || crypto.randomUUID()}:${start.toISOString()}`,
-        uid: ev.uid || '',
-        title: String(o.summary ?? ev.summary ?? ''),
-        description: String(o.description ?? ev.description ?? ''),
-        location: String(o.location ?? ev.location ?? ''),
-        start: start.toISOString(),
-        end: end.toISOString(),
-        allDay: ev.datetype === 'date',
-        source: source || 'subscription',
-        sourceUrl: sub.url,
-        sourceLabel: sub.label,
-        sourceId: sub.id,
-    };
-}
-
 /**
- * Fetch eine .ics-URL und liefert alle expandierten Events im Fenster [from, to].
+ * Expandiert geparste node-ical-Daten zu normalisierten Events im Fenster [from, to].
  * Berücksichtigt RRULE, EXDATE, RECURRENCE-ID Overrides.
+ *
+ * @param {object} parsed     Ergebnis von ical.parseICS / ical.async.fromURL
+ * @param {Date}   from
+ * @param {Date}   to
+ * @param {(ev, start, end, override) => object} buildEvent
+ *        Callback, der pro Instanz das fertige Event-Objekt liefert (quellen-spezifisch).
  */
-async function fetchAndExpand(sub, from, to) {
-    const httpsUrl = rewriteWebcal(sub.url);
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 20_000);
-
-    let data;
-    try {
-        data = await ical.async.fromURL(httpsUrl, {
-            headers: { 'User-Agent': 'OLE-OS/1.0' },
-            signal: ac.signal,
-        });
-    } finally {
-        clearTimeout(timer);
-    }
-
+function expandVEvents(parsed, from, to, buildEvent) {
     const out = [];
-    for (const ev of Object.values(data)) {
+    for (const ev of Object.values(parsed)) {
         if (!ev || ev.type !== 'VEVENT') continue;
 
         const evStart = safeDate(ev.start);
@@ -67,7 +42,7 @@ async function fetchAndExpand(sub, from, to) {
         // Single-Instance
         if (!ev.rrule) {
             if (evEnd >= from && evStart <= to) {
-                out.push(normalize(ev, { start: evStart, end: evEnd, sub }));
+                out.push(buildEvent(ev, evStart, evEnd, null));
             }
             continue;
         }
@@ -78,7 +53,7 @@ async function fetchAndExpand(sub, from, to) {
         try {
             occurrences = ev.rrule.between(from, to, true) || [];
         } catch (e) {
-            console.warn('[calendar-ical] rrule.between failed', sub.url, e?.message);
+            console.warn('[calendar-ical] rrule.between failed', e?.message);
             continue;
         }
 
@@ -98,15 +73,58 @@ async function fetchAndExpand(sub, from, to) {
                 const ovStart = safeDate(override.start) || occ;
                 const ovEnd = safeDate(override.end) || new Date(ovStart.getTime() + duration);
                 if (ovEnd >= from && ovStart <= to) {
-                    out.push(normalize(ev, { start: ovStart, end: ovEnd, sub, override }));
+                    out.push(buildEvent(ev, ovStart, ovEnd, override));
                 }
             } else {
                 const occEnd = new Date(occ.getTime() + duration);
-                out.push(normalize(ev, { start: occ, end: occEnd, sub }));
+                out.push(buildEvent(ev, occ, occEnd, null));
             }
         }
     }
     return out;
 }
 
-module.exports = { fetchAndExpand };
+// Event-Builder für read-only iCal-Subscriptions (Stufe 1)
+function subscriptionEventBuilder(sub) {
+    return (ev, start, end, override) => {
+        const o = override || {};
+        return {
+            id: `${sub.id}:${ev.uid || crypto.randomUUID()}:${start.toISOString()}`,
+            uid: ev.uid || '',
+            title: String(o.summary ?? ev.summary ?? ''),
+            description: String(o.description ?? ev.description ?? ''),
+            location: String(o.location ?? ev.location ?? ''),
+            start: start.toISOString(),
+            end: end.toISOString(),
+            allDay: ev.datetype === 'date',
+            source: 'subscription',
+            writable: false,
+            sourceUrl: sub.url,
+            sourceLabel: sub.label,
+            sourceId: sub.id,
+        };
+    };
+}
+
+/**
+ * Fetch eine .ics-URL und liefert alle expandierten Events im Fenster [from, to].
+ */
+async function fetchAndExpand(sub, from, to) {
+    const httpsUrl = rewriteWebcal(sub.url);
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 20_000);
+
+    let data;
+    try {
+        data = await ical.async.fromURL(httpsUrl, {
+            headers: { 'User-Agent': 'OLE-OS/1.0' },
+            signal: ac.signal,
+        });
+    } finally {
+        clearTimeout(timer);
+    }
+
+    return expandVEvents(data, from, to, subscriptionEventBuilder(sub));
+}
+
+module.exports = { fetchAndExpand, expandVEvents, safeDate };

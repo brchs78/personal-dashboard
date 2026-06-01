@@ -52,8 +52,16 @@ contextBridge.exposeInMainWorld('oleAPI', {
         addSub:         ({ label, url }) => ipcRenderer.invoke('calendar:add-sub', { label, url }),
         removeSub:      (id) => ipcRenderer.invoke('calendar:remove-sub', id),
         addInternal:    (partial) => ipcRenderer.invoke('calendar:add-internal', partial),
-        updateInternal: (id, patch) => ipcRenderer.invoke('calendar:update-internal', { id, patch }),
-        deleteInternal: (id) => ipcRenderer.invoke('calendar:delete-internal', id),
+        updateInternal: (id, patch, event) => ipcRenderer.invoke('calendar:update-internal', { id, patch, event }),
+        deleteInternal: (idOrEvent) => ipcRenderer.invoke('calendar:delete-internal', idOrEvent),
         onUpdated:      (cb) => ipcRenderer.on('calendar:updated', (_e, payload) => cb(payload)),
+        caldav: {
+            status:        () => ipcRenderer.invoke('calendar:caldav-status'),
+            connect:       ({ appleId, password }) => ipcRenderer.invoke('calendar:caldav-connect', { appleId, password }),
+            disconnect:    () => ipcRenderer.invoke('calendar:caldav-disconnect'),
+            listCalendars: () => ipcRenderer.invoke('calendar:caldav-list-calendars'),
+            setVisible:    (urls) => ipcRenderer.invoke('calendar:caldav-set-visible', urls),
+            setTarget:     (url) => ipcRenderer.invoke('calendar:caldav-set-target', url),
+        },
     },
 })

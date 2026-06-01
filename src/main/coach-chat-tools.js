@@ -4,6 +4,7 @@
 const todoStore = require('./todo-store.js');
 const coachPlanStore = require('./coach-plan-store.js');
 const calendarStore = require('./calendar-store.js');
+const calendarCaldav = require('./calendar-caldav.js');
 
 const TOOLS = [
     {
@@ -173,8 +174,13 @@ function filterTodos(items, { include_done = false, filter = 'all' } = {}) {
     return out;
 }
 
+function caldavWriteEnabled() {
+    const a = calendarStore.loadCalDAVAccount();
+    return a.connected && !!a.targetCalendarUrl;
+}
+
 async function dispatch(name, input, ctx = {}) {
-    const { getHealthSummary, broadcastTodos, broadcastCalendar } = ctx;
+    const { getHealthSummary, broadcastTodos, broadcastCalendar, refreshCalendar } = ctx;
     const args = input || {};
     switch (name) {
         case 'list_todos': {
@@ -264,16 +270,29 @@ async function dispatch(name, input, ctx = {}) {
         }
         case 'create_calendar_event': {
             if (!args.title || !args.start) throw new Error('missing_title_or_start');
-            const ev = calendarStore.addInternalEvent(args);
+            let ev;
+            if (caldavWriteEnabled()) {
+                ev = await calendarCaldav.createEvent(args);
+                await refreshCalendar?.();
+            } else {
+                ev = calendarStore.addInternalEvent(args);
+            }
             broadcastCalendar?.();
             return ev;
         }
         case 'update_calendar_event': {
             const { id, patch } = args;
             if (!id) throw new Error('missing_id');
+            // Erst CalDAV, dann internal, dann subscription (read-only).
+            const cdav = calendarStore.findCalDAVEvent(id);
+            if (cdav) {
+                const ev = await calendarCaldav.updateEvent(cdav, patch || {});
+                await refreshCalendar?.();
+                broadcastCalendar?.();
+                return ev;
+            }
             const cur = calendarStore.findInternalEvent(id);
             if (!cur) {
-                // Prüfen ob das Event aus einer Subscription stammt
                 const ext = calendarStore.getAllSubscriptionEvents().find((e) => e.id === id);
                 if (ext) throw new Error('event_is_read_only_subscription');
                 throw new Error(`event_not_found: ${id}`);
@@ -285,6 +304,13 @@ async function dispatch(name, input, ctx = {}) {
         case 'delete_calendar_event': {
             const { id } = args;
             if (!id) throw new Error('missing_id');
+            const cdav = calendarStore.findCalDAVEvent(id);
+            if (cdav) {
+                const r = await calendarCaldav.deleteEvent(cdav);
+                await refreshCalendar?.();
+                broadcastCalendar?.();
+                return r;
+            }
             const cur = calendarStore.findInternalEvent(id);
             if (!cur) {
                 const ext = calendarStore.getAllSubscriptionEvents().find((e) => e.id === id);

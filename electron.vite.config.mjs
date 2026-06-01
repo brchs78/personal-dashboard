@@ -25,6 +25,7 @@ export default defineConfig({
                     "coach-chat-ipc": resolve("src/main/coach-chat-ipc.js"),
                     "calendar-store": resolve("src/main/calendar-store.js"),
                     "calendar-ical": resolve("src/main/calendar-ical.js"),
+                    "calendar-caldav": resolve("src/main/calendar-caldav.js"),
                     "calendar-sync": resolve("src/main/calendar-sync.js"),
                     "calendar-ipc": resolve("src/main/calendar-ipc.js"),
                 },
