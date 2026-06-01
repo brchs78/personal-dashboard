@@ -56,12 +56,13 @@ export default function useCoachChat() {
         const a = api();
         if (!a) return;
         a.getHistory().then((msgs) => setMessages(msgs || []));
-        a.onHistoryUpdated((msgs) => setMessages(msgs || []));
-        a.onToolEvent((ev) => {
+        const unsubHistory = a.onHistoryUpdated((msgs) => setMessages(msgs || []));
+        const unsubTool = a.onToolEvent((ev) => {
             if (ev?.status === "started") {
                 setLiveEvents((prev) => [...prev, ev]);
             }
         });
+        return () => { unsubHistory?.(); unsubTool?.(); };
     }, []);
 
     const send = useCallback(async (userMessage, apiKey) => {

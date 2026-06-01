@@ -20,10 +20,11 @@ export function useTodos() {
             setMigrated(!!data?.migratedFromLocalStorage);
             setReady(true);
         });
-        a.onUpdated((data) => {
+        const unsub = a.onUpdated((data) => {
             setItems(data?.items || []);
             setMigrated(!!data?.migratedFromLocalStorage);
         });
+        return () => unsub?.();
     }, []);
 
     const add = useCallback(async (partial) => {

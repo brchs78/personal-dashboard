@@ -36,7 +36,7 @@ export function useHealthSummary() {
 
         fetchSummary();
 
-        a.onReady((payload) => {
+        const unsubReady = a.onReady((payload) => {
             if (payload?.status === 'error') {
                 setStatus('error');
                 setError(payload.error || 'parse error');
@@ -46,14 +46,15 @@ export function useHealthSummary() {
                 setStatus('no-source');
                 return;
             }
-            // ready — neu abfragen
             fetchSummary();
         });
 
-        a.onProgress((payload) => {
+        const unsubProgress = a.onProgress((payload) => {
             setStatus('parsing');
             setProgress(payload?.percent ?? 0);
         });
+
+        return () => { unsubReady?.(); unsubProgress?.(); };
     }, [fetchSummary]);
 
     const refresh = useCallback(async () => {
@@ -88,15 +89,14 @@ export function useHealthTrend(metric, days = 30) {
                 if (!cancelled) setLoading(false);
             });
 
-        // refresh wenn neue Daten ready
         const refetch = () => {
             a.getTrends(metric, days).then((res) => {
                 if (!cancelled) setPoints(Array.isArray(res) ? res : []);
             });
         };
-        a.onReady(refetch);
+        const unsubReady = a.onReady(refetch);
 
-        return () => { cancelled = true; };
+        return () => { cancelled = true; unsubReady?.(); };
     }, [metric, days]);
 
     return { points, loading };

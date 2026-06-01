@@ -24,11 +24,12 @@ export function useCalendar() {
             setCaldav(data?.caldav || { connected: false });
             setReady(true);
         });
-        a.onUpdated((data) => {
+        const unsub = a.onUpdated((data) => {
             setEvents(data?.events || []);
             setSubscriptions(data?.subscriptions || []);
             if (data?.caldav) setCaldav(data.caldav);
         });
+        return () => unsub?.();
     }, []);
 
     const refresh = useCallback(async () => {

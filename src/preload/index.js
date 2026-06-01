@@ -1,14 +1,21 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
+// Hilfsfunktion: registriert Listener + gibt Cleanup zurück
+function on(channel, cb) {
+    const handler = (_e, payload) => cb(payload)
+    ipcRenderer.on(channel, handler)
+    return () => ipcRenderer.removeListener(channel, handler)
+}
+
 contextBridge.exposeInMainWorld('oleAPI', {
     hideWindow: () => ipcRenderer.send('hide-window'),
-    onRoutine: (cb) => ipcRenderer.on('routine-trigger', (_e, id) => cb(id)),
+    onRoutine: (cb) => on('routine-trigger', (id) => cb(id)),
     health: {
         getSummary: () => ipcRenderer.invoke('health:get-summary'),
         getTrends:  (metric, days) => ipcRenderer.invoke('health:get-trends', metric, days),
         refresh:    () => ipcRenderer.invoke('health:refresh'),
-        onReady:    (cb) => ipcRenderer.on('health:ready', (_e, payload) => cb(payload)),
-        onProgress: (cb) => ipcRenderer.on('health:progress', (_e, payload) => cb(payload)),
+        onReady:    (cb) => on('health:ready', cb),
+        onProgress: (cb) => on('health:progress', cb),
     },
     strava: {
         status:         () => ipcRenderer.invoke('strava:status'),
@@ -17,17 +24,17 @@ contextBridge.exposeInMainWorld('oleAPI', {
         listActivities: (opts) => ipcRenderer.invoke('strava:list-activities', opts),
         sync:           (opts) => ipcRenderer.invoke('strava:sync', opts),
         getActivity:    (id) => ipcRenderer.invoke('strava:get-activity', id),
-        onStatus:       (cb) => ipcRenderer.on('strava:status', (_e, payload) => cb(payload)),
-        onActivities:   (cb) => ipcRenderer.on('strava:activities', (_e, payload) => cb(payload)),
+        onStatus:       (cb) => on('strava:status', cb),
+        onActivities:   (cb) => on('strava:activities', cb),
     },
     plan: {
-        getCurrent: () => ipcRenderer.invoke('plan:get-current'),
-        generate:   (opts) => ipcRenderer.invoke('plan:generate', opts),
-        markDone:   (date, done) => ipcRenderer.invoke('plan:mark-done', { date, done }),
-        updateDay:  (date, patch) => ipcRenderer.invoke('plan:update-day', { date, patch }),
-        clear:      () => ipcRenderer.invoke('plan:clear'),
-        onUpdated:  (cb) => ipcRenderer.on('plan:updated', (_e, payload) => cb(payload)),
-        onDoneUpdated: (cb) => ipcRenderer.on('plan:done-updated', (_e, payload) => cb(payload)),
+        getCurrent:    () => ipcRenderer.invoke('plan:get-current'),
+        generate:      (opts) => ipcRenderer.invoke('plan:generate', opts),
+        markDone:      (date, done) => ipcRenderer.invoke('plan:mark-done', { date, done }),
+        updateDay:     (date, patch) => ipcRenderer.invoke('plan:update-day', { date, patch }),
+        clear:         () => ipcRenderer.invoke('plan:clear'),
+        onUpdated:     (cb) => on('plan:updated', cb),
+        onDoneUpdated: (cb) => on('plan:done-updated', cb),
     },
     todo: {
         getAll:     () => ipcRenderer.invoke('todo:get-all'),
@@ -37,14 +44,14 @@ contextBridge.exposeInMainWorld('oleAPI', {
         toggleDone: (id)          => ipcRenderer.invoke('todo:toggle', id),
         reorder:    (orderedIds)  => ipcRenderer.invoke('todo:reorder', orderedIds),
         migrate:    (legacyItems) => ipcRenderer.invoke('todo:migrate', legacyItems),
-        onUpdated:  (cb) => ipcRenderer.on('todo:updated', (_e, payload) => cb(payload)),
+        onUpdated:  (cb) => on('todo:updated', cb),
     },
     coach: {
-        send:       ({ apiKey, userMessage }) => ipcRenderer.invoke('coach:send', { apiKey, userMessage }),
-        clear:      () => ipcRenderer.invoke('coach:clear'),
-        getHistory: () => ipcRenderer.invoke('coach:get-history'),
-        onHistoryUpdated: (cb) => ipcRenderer.on('coach:history-updated', (_e, payload) => cb(payload)),
-        onToolEvent:      (cb) => ipcRenderer.on('coach:tool-event', (_e, payload) => cb(payload)),
+        send:             ({ apiKey, userMessage }) => ipcRenderer.invoke('coach:send', { apiKey, userMessage }),
+        clear:            () => ipcRenderer.invoke('coach:clear'),
+        getHistory:       () => ipcRenderer.invoke('coach:get-history'),
+        onHistoryUpdated: (cb) => on('coach:history-updated', cb),
+        onToolEvent:      (cb) => on('coach:tool-event', cb),
     },
     calendar: {
         list:           () => ipcRenderer.invoke('calendar:list'),
@@ -55,7 +62,7 @@ contextBridge.exposeInMainWorld('oleAPI', {
         addInternal:    (partial) => ipcRenderer.invoke('calendar:add-internal', partial),
         updateInternal: (id, patch, event) => ipcRenderer.invoke('calendar:update-internal', { id, patch, event }),
         deleteInternal: (idOrEvent) => ipcRenderer.invoke('calendar:delete-internal', idOrEvent),
-        onUpdated:      (cb) => ipcRenderer.on('calendar:updated', (_e, payload) => cb(payload)),
+        onUpdated:      (cb) => on('calendar:updated', cb),
         caldav: {
             status:        () => ipcRenderer.invoke('calendar:caldav-status'),
             connect:       ({ appleId, password }) => ipcRenderer.invoke('calendar:caldav-connect', { appleId, password }),

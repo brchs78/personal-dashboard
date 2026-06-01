@@ -31,11 +31,12 @@ export function useStrava() {
         const a = api(); if (!a) return;
         refreshStatus();
         loadCached();
-        a.onStatus((s) => setStatus(s));
-        a.onActivities(({ lastSync }) => {
+        const unsubStatus = a.onStatus((s) => setStatus(s));
+        const unsubActivities = a.onActivities(({ lastSync }) => {
             setLastSync(lastSync);
             loadCached();
         });
+        return () => { unsubStatus?.(); unsubActivities?.(); };
     }, [refreshStatus, loadCached]);
 
     const connect = useCallback(async () => {

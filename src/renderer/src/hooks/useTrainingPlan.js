@@ -28,8 +28,9 @@ export function useTrainingPlan() {
     useEffect(() => {
         const a = api(); if (!a) return;
         refresh();
-        a.onUpdated(({ plan }) => setPlan(plan));
-        a.onDoneUpdated((map) => setDone(map || {}));
+        const unsubPlan = a.onUpdated(({ plan }) => setPlan(plan));
+        const unsubDone = a.onDoneUpdated((map) => setDone(map || {}));
+        return () => { unsubPlan?.(); unsubDone?.(); };
     }, [refresh]);
 
     const generate = useCallback(async (weekStart) => {
