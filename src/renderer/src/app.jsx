@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Sidebar from "./components/Sidebar";
 import CoachHome from "./components/CoachHome";
 import Health from "./components/Health";
 import TrainingPlan from "./components/TrainingPlan";
 import Calendar from "./components/Calendar";
 import Todos from "./components/Todos";
-import tokens from "./styles/tokens";
+import { useTheme } from "./hooks/useTheme.jsx";
 
 // ── Speicher-Adapter: nutzt window.storage (Claude) oder localStorage (Electron) ──
 const store = (typeof window !== "undefined" && window.storage) ? window.storage : {
@@ -14,16 +14,11 @@ const store = (typeof window !== "undefined" && window.storage) ? window.storage
 };
 const getKey = () => (typeof localStorage !== "undefined" ? localStorage.getItem("ole:api-key") || "" : "");
 
-// ── Colors ── (Token-basierte Tab-Palette)
+// ── Colors ── (Token-basierte Tab-Palette, wird in App() mit useMemo gebaut)
 function mkPal(hex) {
-    // Parse hex → rgba variants for bg/border tints
     const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
     return { acc: hex, bg: `rgba(${r},${g},${b},0.10)`, br: `rgba(${r},${g},${b},0.25)` };
 }
-const SP = mkPal(tokens.colors.tab.workout);
-const UN = mkPal(tokens.colors.tab.uni);
-const BD = mkPal(tokens.colors.tab.body);
-const KL = mkPal(tokens.colors.tab.calendar);
 
 function calcRecovery(restHR, sleepHrs, stress) {
     const hr = Math.max(0, Math.min(10, (80 - Math.max(40, Math.min(80, restHR))) / 40 * 10));
@@ -45,7 +40,7 @@ function getCalDays(year, month) {
 function gTxt(a, b) {
     return { background: `linear-gradient(135deg,${a},${b})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" };
 }
-function blockClr(t) { return t === "sport" ? SP : t === "uni" ? UN : { acc: "#999", bg: "rgba(128,128,128,0.06)", br: "rgba(128,128,128,0.12)" }; }
+// blockClr moved inside App() — needs SP/UN from useTheme
 function dTo(d) { const dt = new Date(d), n = new Date(); n.setHours(0, 0, 0, 0); return Math.max(0, Math.round((dt - n) / 86400000)); }
 function fmtT(s) { return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }
 function getWeekDates() {
@@ -101,6 +96,13 @@ const BINP = { ...INP, fontSize: 22, fontWeight: 700, letterSpacing: "-0.5px" };
 const LBL = { fontSize: 11, fontWeight: 700, color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 5px", display: "block" };
 
 export default function App() {
+    const { tokens, mode, toggle } = useTheme();
+    const SP = useMemo(() => mkPal(tokens.colors.tab.workout), [tokens]);
+    const UN = useMemo(() => mkPal(tokens.colors.tab.uni), [tokens]);
+    const BD = useMemo(() => mkPal(tokens.colors.tab.body), [tokens]);
+    const KL = useMemo(() => mkPal(tokens.colors.tab.calendar), [tokens]);
+    function blockClr(t) { return t === "sport" ? SP : t === "uni" ? UN : { acc: "#999", bg: "rgba(128,128,128,0.06)", br: "rgba(128,128,128,0.12)" }; }
+
     const [tab, setTab] = useState("dash");
     const [uTab, setUTab] = useState("pruefungen");
     const [showSettings, setShowSettings] = useState(false);
@@ -324,6 +326,9 @@ export default function App() {
                         <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>Max-Herzfrequenz <span style={{ fontWeight: 400, color: "var(--color-text-tertiary)" }}>bpm</span></p>
                         <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>Für die Puls-Zonen-Berechnung. Faustregel: 220 − Alter.</p>
                         <input type="number" value={maxHR} onChange={e => setMaxHR(parseInt(e.target.value) || 197)} onBlur={() => save("ole:max-hr", maxHR)} style={{ ...INP, marginBottom: 12 }} />
+                        <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>Erscheinungsbild</p>
+                        <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>Zwischen hellem und dunklem Modus wechseln.</p>
+                        <button onClick={toggle} style={{ width: "100%", padding: "10px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontSize: 13, fontWeight: 600, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-primary)", marginBottom: 12 }}>{mode === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode"}</button>
                         <div style={{ display: "flex", gap: 8 }}>
                             <button onClick={saveKey} style={{ flex: 1, padding: "10px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontWeight: 700, fontSize: 13, border: "none", background: tokens.colors.accent.DEFAULT, color: "#ffffff" }}>Speichern</button>
                             <button onClick={() => setShowSettings(false)} style={{ padding: "10px 16px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontSize: 13, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-secondary)" }}>Abbrechen</button>

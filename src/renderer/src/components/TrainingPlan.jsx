@@ -5,22 +5,26 @@ import { useState } from 'react';
 import { Sparkles, RefreshCw, CheckCircle2, Circle, Calendar, Flame, Moon, Pencil, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTrainingPlan } from '../hooks/useTrainingPlan';
-import tokens from '../styles/tokens';
+import { useTheme } from "../hooks/useTheme.jsx";
 
-const TYPE_COLOR = {
-    Easy: tokens.colors.accent.secondary,
-    Long: tokens.colors.accent.DEFAULT,
-    Tempo: tokens.colors.tab.body,
-    Threshold: tokens.colors.tab.body,
-    Intervals: tokens.colors.tab.workout,
-    Recovery: tokens.colors.tab.calendar,
-    Cross: tokens.colors.tab.uni,
-    Rest: tokens.colors.text.tertiary,
-    'Yoga+Easy': tokens.colors.tab.calendar,
-    'Gym+Easy': tokens.colors.tab.calendar,
-};
+function getTypeColor(tokens) {
+    return {
+        Easy: tokens.colors.accent.secondary,
+        Long: tokens.colors.accent.DEFAULT,
+        Tempo: tokens.colors.tab.body,
+        Threshold: tokens.colors.tab.body,
+        Intervals: tokens.colors.tab.workout,
+        Recovery: tokens.colors.tab.calendar,
+        Cross: tokens.colors.tab.uni,
+        Rest: tokens.colors.text.tertiary,
+        'Yoga+Easy': tokens.colors.tab.calendar,
+        'Gym+Easy': tokens.colors.tab.calendar,
+    };
+}
 
 export default function TrainingPlan() {
+    const { tokens } = useTheme();
+    const TYPE_COLOR = getTypeColor(tokens);
     const { plan, done, busy, error, generate, toggleDone, updateDay } = useTrainingPlan();
     const [editing, setEditing] = useState(null); // day object or null
 
@@ -54,6 +58,8 @@ export default function TrainingPlan() {
 }
 
 function Header({ plan, busy, onGenerate }) {
+    const { tokens } = useTheme();
+    const TYPE_COLOR = getTypeColor(tokens);
     return (
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: tokens.spacing.lg, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -107,6 +113,8 @@ function Header({ plan, busy, onGenerate }) {
 }
 
 function EmptyState({ onGenerate }) {
+    const { tokens } = useTheme();
+    const TYPE_COLOR = getTypeColor(tokens);
     return (
         <div style={{ ...tokens.glass.card, padding: tokens.spacing.xl, display: 'flex', flexDirection: 'column', gap: tokens.spacing.md }}>
             <Sparkles size={32} color={tokens.colors.accent.DEFAULT} strokeWidth={2} />
@@ -142,6 +150,8 @@ function EmptyState({ onGenerate }) {
 }
 
 function BusyCard() {
+    const { tokens } = useTheme();
+    const TYPE_COLOR = getTypeColor(tokens);
     return (
         <div style={{ ...tokens.glass.card, padding: tokens.spacing.lg, display: 'flex', alignItems: 'center', gap: tokens.spacing.md }}>
             <RefreshCw size={20} color={tokens.colors.accent.DEFAULT} className="spin" />
@@ -153,6 +163,8 @@ function BusyCard() {
 }
 
 function ErrorCard({ message }) {
+    const { tokens } = useTheme();
+    const TYPE_COLOR = getTypeColor(tokens);
     return (
         <div style={{ ...tokens.glass.card, padding: tokens.spacing.md, borderColor: tokens.colors.status.danger }}>
             <p style={{ margin: 0, fontSize: tokens.typography.fontSize.sm, color: tokens.colors.status.danger }}>
@@ -163,6 +175,8 @@ function ErrorCard({ message }) {
 }
 
 function WeekSummary({ plan, done }) {
+    const { tokens } = useTheme();
+    const TYPE_COLOR = getTypeColor(tokens);
     const total = plan.days?.reduce((s, d) => s + (d.distanceKm || 0), 0) || plan.weeklyKm || 0;
     const completedCount = plan.days?.filter(d => done[d.date]).length || 0;
     const totalCount = plan.days?.length || 0;
@@ -189,6 +203,8 @@ function WeekSummary({ plan, done }) {
 }
 
 function SummaryStat({ icon: Icon, label, value }) {
+    const { tokens } = useTheme();
+    const TYPE_COLOR = getTypeColor(tokens);
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: tokens.colors.text.tertiary }}>
@@ -209,6 +225,8 @@ function SummaryStat({ icon: Icon, label, value }) {
 }
 
 function DaysList({ plan, done, onToggle, onEdit }) {
+    const { tokens } = useTheme();
+    const TYPE_COLOR = getTypeColor(tokens);
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm }}>
             {(plan.days || []).map((d) => (
@@ -219,6 +237,8 @@ function DaysList({ plan, done, onToggle, onEdit }) {
 }
 
 function DayCard({ day, isDone, onToggle, onEdit }) {
+    const { tokens } = useTheme();
+    const TYPE_COLOR = getTypeColor(tokens);
     const [hovered, setHovered] = useState(false);
     const accent = TYPE_COLOR[day.type] || tokens.colors.accent.DEFAULT;
     return (
@@ -328,6 +348,8 @@ function DayCard({ day, isDone, onToggle, onEdit }) {
 }
 
 function Metric({ value, unit }) {
+    const { tokens } = useTheme();
+    const TYPE_COLOR = getTypeColor(tokens);
     return (
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
             <span style={{
@@ -345,6 +367,8 @@ function Metric({ value, unit }) {
 }
 
 function PhaseExplainer({ phase }) {
+    const { tokens } = useTheme();
+    const TYPE_COLOR = getTypeColor(tokens);
     const explainers = {
         Base: {
             title: 'Phase 1 · Base-Building',
@@ -393,6 +417,8 @@ function PhaseExplainer({ phase }) {
 const ALL_TYPES = ['Easy','Long','Tempo','Threshold','Intervals','Recovery','Cross','Rest','Yoga+Easy','Gym+Easy'];
 
 function DayEditModal({ day, onClose, onSave }) {
+    const { tokens } = useTheme();
+    const TYPE_COLOR = getTypeColor(tokens);
     const [type, setType] = useState(day.type || 'Easy');
     const [title, setTitle] = useState(day.title || '');
     const [distanceKm, setDistanceKm] = useState(day.distanceKm != null ? String(day.distanceKm) : '');
@@ -435,36 +461,36 @@ function DayEditModal({ day, onClose, onSave }) {
                     </button>
                 </div>
 
-                <label style={labelStyle()}>Typ</label>
-                <select value={type} onChange={(e) => setType(e.target.value)} style={inputStyle()}>
+                <label style={labelStyle(tokens)}>Typ</label>
+                <select value={type} onChange={(e) => setType(e.target.value)} style={inputStyle(tokens)}>
                     {ALL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
 
-                <label style={{ ...labelStyle(), marginTop: 10 }}>Titel</label>
-                <input value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle()} placeholder="z.B. Easy 10km Zone 2" />
+                <label style={{ ...labelStyle(tokens), marginTop: 10 }}>Titel</label>
+                <input value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle(tokens)} placeholder="z.B. Easy 10km Zone 2" />
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
                     <div>
-                        <label style={labelStyle()}>Distanz (km)</label>
+                        <label style={labelStyle(tokens)}>Distanz (km)</label>
                         <input type="number" value={distanceKm} onChange={(e) => setDistanceKm(e.target.value)}
-                            placeholder="optional" style={inputStyle()} />
+                            placeholder="optional" style={inputStyle(tokens)} />
                     </div>
                     <div>
-                        <label style={labelStyle()}>HR-Zone</label>
-                        <select value={hrZone} onChange={(e) => setHrZone(e.target.value)} style={inputStyle()}>
+                        <label style={labelStyle(tokens)}>HR-Zone</label>
+                        <select value={hrZone} onChange={(e) => setHrZone(e.target.value)} style={inputStyle(tokens)}>
                             <option value="">–</option>
                             {['Z1','Z2','Z3','Z4','Z5'].map((z) => <option key={z} value={z}>{z}</option>)}
                         </select>
                     </div>
                 </div>
 
-                <label style={{ ...labelStyle(), marginTop: 10 }}>Pace-Ziel</label>
+                <label style={{ ...labelStyle(tokens), marginTop: 10 }}>Pace-Ziel</label>
                 <input value={paceTarget} onChange={(e) => setPaceTarget(e.target.value)}
-                    placeholder="5:20–5:40/km" style={inputStyle()} />
+                    placeholder="5:20–5:40/km" style={inputStyle(tokens)} />
 
-                <label style={{ ...labelStyle(), marginTop: 10 }}>Notizen</label>
+                <label style={{ ...labelStyle(tokens), marginTop: 10 }}>Notizen</label>
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-                    rows={2} style={{ ...inputStyle(), resize: 'vertical' }} />
+                    rows={2} style={{ ...inputStyle(tokens), resize: 'vertical' }} />
 
                 <button onClick={save} style={{
                     ...tokens.glass.buttonAccent, marginTop: 16, width: '100%',
@@ -477,7 +503,7 @@ function DayEditModal({ day, onClose, onSave }) {
     );
 }
 
-function inputStyle() {
+function inputStyle(tokens) {
     return {
         ...tokens.glass.input,
         width: '100%', padding: '8px 10px', fontSize: 13,
@@ -485,7 +511,7 @@ function inputStyle() {
     };
 }
 
-function labelStyle() {
+function labelStyle(tokens) {
     return {
         display: 'block', fontSize: 10, textTransform: 'uppercase',
         letterSpacing: '0.1em', color: tokens.colors.text.tertiary,

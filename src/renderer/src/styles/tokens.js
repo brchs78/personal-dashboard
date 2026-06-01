@@ -1,81 +1,120 @@
-// OLE OS — Design System Tokens
-// Stil: Claude-inspired warm light theme
-// Palette: Warm Cream + Coral accent
-//
-// CommonJS-Export, damit dieselbe Quelle sowohl im Renderer (Vite-CJS-Interop)
-// als auch in `tailwind.config.js` per require() nutzbar ist.
+// OLE OS — Design System Tokens (Light + Dark)
+// Palette: Warm Cream/Coral (light) + Deep Navy/Coral (dark)
 
 // ──────────────────────────────────────────────────────────────────
-// COLORS
+// LIGHT COLORS
 // ──────────────────────────────────────────────────────────────────
-const colors = {
-  // Page-Backgrounds (Warm Cream)
+const lightColors = {
   bg: {
-    base: "#faf9f5",        // warmes Cream — Page-Background
-    elevated: "#ffffff",    // weiße Cards
-    sunken: "#f3efe7",      // Drawer, Sidebar, Inputs
+    base: "#faf9f5",
+    elevated: "#ffffff",
+    sunken: "#f3efe7",
   },
-
-  // Card-Surfaces (soft white)
   surface: {
     glass: "rgba(255,255,255,0.80)",
     glassHover: "rgba(255,255,255,0.92)",
     glassActive: "rgba(255,255,255,1.0)",
     glassStrong: "rgba(255,255,255,0.95)",
   },
-
-  // Accent — Coral (Primary) + Warm Taupe (Secondary)
   accent: {
-    DEFAULT: "#cc785c",                        // Primary Coral
-    hover: "#b8654a",                          // Hover dunkler
-    pressed: "#a5573f",                        // Pressed
-    soft: "rgba(204,120,92,0.12)",             // Background-Tint
-    softer: "rgba(204,120,92,0.06)",           // Sehr dezent
-    border: "rgba(204,120,92,0.25)",           // Border für Accent-Karten
-    glow: "rgba(204,120,92,0.30)",             // Shadow-Glow
-    secondary: "#8b7355",                      // Secondary warm Taupe
+    DEFAULT: "#cc785c",
+    hover: "#b8654a",
+    pressed: "#a5573f",
+    soft: "rgba(204,120,92,0.12)",
+    softer: "rgba(204,120,92,0.06)",
+    border: "rgba(204,120,92,0.25)",
+    glow: "rgba(204,120,92,0.30)",
+    secondary: "#8b7355",
     secondaryHover: "#7a6347",
     secondarySoft: "rgba(139,115,85,0.10)",
-    gradient: "linear-gradient(135deg,#cc785c,#d4a27f)",          // Coral → Sand
+    gradient: "linear-gradient(135deg,#cc785c,#d4a27f)",
     gradientSoft: "linear-gradient(135deg,rgba(204,120,92,0.12),rgba(212,162,127,0.12))",
   },
-
-  // Text (warm dark)
   text: {
-    primary: "#3d3929",                        // Headlines, Body
-    secondary: "rgba(61,57,41,0.60)",          // Sublabels
-    tertiary: "rgba(61,57,41,0.40)",           // Captions, Metadata
-    disabled: "rgba(61,57,41,0.25)",           // Disabled
-    inverse: "#ffffff",                        // Text auf Accent-CTA
+    primary: "#3d3929",
+    secondary: "rgba(61,57,41,0.60)",
+    tertiary: "rgba(61,57,41,0.40)",
+    disabled: "rgba(61,57,41,0.25)",
+    inverse: "#ffffff",
   },
-
-  // Borders (warm)
   border: {
     glass: "rgba(61,57,41,0.10)",
     glassHover: "rgba(61,57,41,0.16)",
     subtle: "rgba(61,57,41,0.06)",
     strong: "rgba(61,57,41,0.20)",
   },
-
-  // Semantic / Status
   status: {
     success: "#5a8a5e",
     warning: "#b8860b",
     danger: "#c44536",
     info: "#4a7fb5",
   },
-
-  // Tab-Akzente (warm, abgestimmt)
   tab: {
-    workout: "#cc785c",     // Coral
-    body: "#a67c5a",        // Bronze
-    uni: "#8b7355",         // Taupe
-    calendar: "#7a6b56",    // Olive
+    workout: "#cc785c",
+    body: "#a67c5a",
+    uni: "#8b7355",
+    calendar: "#7a6b56",
   },
 };
 
 // ──────────────────────────────────────────────────────────────────
-// BORDER RADIUS
+// DARK COLORS
+// ──────────────────────────────────────────────────────────────────
+const darkColors = {
+  bg: {
+    base: "#1a1a1a",
+    elevated: "#242424",
+    sunken: "#111111",
+  },
+  surface: {
+    glass: "rgba(255,255,255,0.06)",
+    glassHover: "rgba(255,255,255,0.10)",
+    glassActive: "rgba(255,255,255,0.12)",
+    glassStrong: "rgba(255,255,255,0.14)",
+  },
+  accent: {
+    DEFAULT: "#d4916e",
+    hover: "#e0a07e",
+    pressed: "#c07a58",
+    soft: "rgba(212,145,110,0.14)",
+    softer: "rgba(212,145,110,0.07)",
+    border: "rgba(212,145,110,0.30)",
+    glow: "rgba(212,145,110,0.35)",
+    secondary: "#b89e7e",
+    secondaryHover: "#c8ae8e",
+    secondarySoft: "rgba(184,158,126,0.12)",
+    gradient: "linear-gradient(135deg,#d4916e,#b89e7e)",
+    gradientSoft: "linear-gradient(135deg,rgba(212,145,110,0.14),rgba(184,158,126,0.14))",
+  },
+  text: {
+    primary: "#e8e4dc",
+    secondary: "rgba(232,228,220,0.60)",
+    tertiary: "rgba(232,228,220,0.40)",
+    disabled: "rgba(232,228,220,0.25)",
+    inverse: "#1a1a1a",
+  },
+  border: {
+    glass: "rgba(255,255,255,0.10)",
+    glassHover: "rgba(255,255,255,0.16)",
+    subtle: "rgba(255,255,255,0.06)",
+    strong: "rgba(255,255,255,0.20)",
+  },
+  status: {
+    success: "#6ebe73",
+    warning: "#daa520",
+    danger: "#e05545",
+    info: "#6a9fd5",
+  },
+  tab: {
+    workout: "#d4916e",
+    body: "#c4a07a",
+    uni: "#b89e7e",
+    calendar: "#a89878",
+  },
+};
+
+// ──────────────────────────────────────────────────────────────────
+// SHARED (mode-independent)
 // ──────────────────────────────────────────────────────────────────
 const radius = {
   sm: "10px",
@@ -87,9 +126,6 @@ const radius = {
   full: "9999px",
 };
 
-// ──────────────────────────────────────────────────────────────────
-// BLUR (für backdrop-filter — weniger nötig im Light-Theme)
-// ──────────────────────────────────────────────────────────────────
 const blur = {
   sm: "10px",
   md: "16px",
@@ -98,22 +134,6 @@ const blur = {
   "2xl": "40px",
 };
 
-// ──────────────────────────────────────────────────────────────────
-// SHADOWS (Warm, weich)
-// ──────────────────────────────────────────────────────────────────
-const shadow = {
-  sm: "0 1px 3px rgba(61,57,41,0.06)",
-  card: "0 1px 2px rgba(61,57,41,0.04), 0 4px 12px rgba(61,57,41,0.06)",
-  cardHover: "0 2px 4px rgba(61,57,41,0.06), 0 8px 24px rgba(61,57,41,0.08)",
-  elevated: "0 4px 16px rgba(61,57,41,0.08), 0 12px 32px rgba(61,57,41,0.06)",
-  modal: "0 8px 32px rgba(61,57,41,0.12), 0 24px 64px rgba(61,57,41,0.08)",
-  glow: "0 2px 12px rgba(204,120,92,0.25)",
-  glowStrong: "0 4px 20px rgba(204,120,92,0.35)",
-};
-
-// ──────────────────────────────────────────────────────────────────
-// SPACING (4px-Grid)
-// ──────────────────────────────────────────────────────────────────
 const spacing = {
   px: "1px",
   xs: "4px",
@@ -126,9 +146,6 @@ const spacing = {
   "4xl": "64px",
 };
 
-// ──────────────────────────────────────────────────────────────────
-// TYPOGRAPHY (Space Grotesk + Newsreader)
-// ──────────────────────────────────────────────────────────────────
 const typography = {
   fontFamily: {
     sans: "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -169,9 +186,6 @@ const typography = {
   },
 };
 
-// ──────────────────────────────────────────────────────────────────
-// MOTION (Framer-Motion-kompatibel)
-// ──────────────────────────────────────────────────────────────────
 const motion = {
   ease: {
     standard: [0.4, 0, 0.2, 1],
@@ -192,65 +206,6 @@ const motion = {
   },
 };
 
-// ──────────────────────────────────────────────────────────────────
-// CARD & COMPONENT PRESETS (fertige Style-Objekte)
-// ──────────────────────────────────────────────────────────────────
-const glass = {
-  card: {
-    background: colors.bg.elevated,
-    border: `1px solid ${colors.border.glass}`,
-    borderRadius: radius.lg,
-    boxShadow: shadow.card,
-  },
-
-  cardHover: {
-    background: colors.bg.elevated,
-    border: `1px solid ${colors.border.glassHover}`,
-    borderRadius: radius.lg,
-    boxShadow: shadow.cardHover,
-  },
-
-  cardStrong: {
-    background: colors.bg.elevated,
-    border: `1px solid ${colors.border.glassHover}`,
-    borderRadius: radius.xl,
-    boxShadow: shadow.elevated,
-  },
-
-  modal: {
-    background: colors.bg.elevated,
-    border: `1px solid ${colors.border.strong}`,
-    borderRadius: radius.xl,
-    boxShadow: shadow.modal,
-  },
-
-  button: {
-    background: colors.bg.sunken,
-    border: `1px solid ${colors.border.glass}`,
-    borderRadius: radius.pill,
-    color: colors.text.primary,
-  },
-
-  buttonAccent: {
-    background: colors.accent.DEFAULT,
-    border: "none",
-    borderRadius: radius.pill,
-    color: colors.text.inverse,
-    boxShadow: shadow.glow,
-    fontWeight: typography.fontWeight.semibold,
-  },
-
-  input: {
-    background: colors.bg.sunken,
-    border: `1px solid ${colors.border.glass}`,
-    borderRadius: radius.md,
-    color: colors.text.primary,
-  },
-};
-
-// ──────────────────────────────────────────────────────────────────
-// Z-INDEX (Layer-Stack)
-// ──────────────────────────────────────────────────────────────────
 const zIndex = {
   base: 0,
   sticky: 10,
@@ -262,29 +217,83 @@ const zIndex = {
 };
 
 // ──────────────────────────────────────────────────────────────────
-// EXPORT
+// BUILD TOKENS FOR A GIVEN MODE
 // ──────────────────────────────────────────────────────────────────
-const tokens = {
-  colors,
-  radius,
-  blur,
-  shadow,
-  spacing,
-  typography,
-  motion,
-  glass,
-  zIndex,
-};
+function buildTokens(mode) {
+  const colors = mode === "dark" ? darkColors : lightColors;
 
-export {
-  colors,
-  radius,
-  blur,
-  shadow,
-  spacing,
-  typography,
-  motion,
-  glass,
-  zIndex,
-};
+  const shadow = mode === "dark" ? {
+    sm: "0 1px 3px rgba(0,0,0,0.20)",
+    card: "0 2px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)",
+    cardHover: "0 4px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
+    elevated: "0 8px 24px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.06)",
+    modal: "0 16px 48px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.08)",
+    glow: "0 2px 16px rgba(212,145,110,0.30)",
+    glowStrong: "0 4px 24px rgba(212,145,110,0.40)",
+  } : {
+    sm: "0 1px 3px rgba(61,57,41,0.06)",
+    card: "0 1px 2px rgba(61,57,41,0.04), 0 4px 12px rgba(61,57,41,0.06)",
+    cardHover: "0 2px 4px rgba(61,57,41,0.06), 0 8px 24px rgba(61,57,41,0.08)",
+    elevated: "0 4px 16px rgba(61,57,41,0.08), 0 12px 32px rgba(61,57,41,0.06)",
+    modal: "0 8px 32px rgba(61,57,41,0.12), 0 24px 64px rgba(61,57,41,0.08)",
+    glow: "0 2px 12px rgba(204,120,92,0.25)",
+    glowStrong: "0 4px 20px rgba(204,120,92,0.35)",
+  };
+
+  const glass = {
+    card: {
+      background: colors.bg.elevated,
+      border: `1px solid ${colors.border.glass}`,
+      borderRadius: radius.lg,
+      boxShadow: shadow.card,
+    },
+    cardHover: {
+      background: colors.bg.elevated,
+      border: `1px solid ${colors.border.glassHover}`,
+      borderRadius: radius.lg,
+      boxShadow: shadow.cardHover,
+    },
+    cardStrong: {
+      background: colors.bg.elevated,
+      border: `1px solid ${colors.border.glassHover}`,
+      borderRadius: radius.xl,
+      boxShadow: shadow.elevated,
+    },
+    modal: {
+      background: colors.bg.elevated,
+      border: `1px solid ${colors.border.strong}`,
+      borderRadius: radius.xl,
+      boxShadow: shadow.modal,
+    },
+    button: {
+      background: colors.bg.sunken,
+      border: `1px solid ${colors.border.glass}`,
+      borderRadius: radius.pill,
+      color: colors.text.primary,
+    },
+    buttonAccent: {
+      background: colors.accent.DEFAULT,
+      border: "none",
+      borderRadius: radius.pill,
+      color: colors.text.inverse,
+      boxShadow: shadow.glow,
+      fontWeight: typography.fontWeight.semibold,
+    },
+    input: {
+      background: colors.bg.sunken,
+      border: `1px solid ${colors.border.glass}`,
+      borderRadius: radius.md,
+      color: colors.text.primary,
+    },
+  };
+
+  return { colors, radius, blur, shadow, spacing, typography, motion, glass, zIndex };
+}
+
+// ──────────────────────────────────────────────────────────────────
+// DEFAULT EXPORT (light — used as fallback / static import)
+// ──────────────────────────────────────────────────────────────────
+const tokens = buildTokens("light");
+
+export { buildTokens, lightColors, darkColors, radius, blur, spacing, typography, motion, zIndex };
 export default tokens;

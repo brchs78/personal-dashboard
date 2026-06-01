@@ -5,9 +5,10 @@
 import { Moon, Heart, Activity, Zap, RefreshCw } from 'lucide-react';
 import { useHealthSummary, useHealthTrend } from '../hooks/useHealth';
 import StravaSection from './StravaSection';
-import tokens from '../styles/tokens';
+import { useTheme } from "../hooks/useTheme.jsx";
 
 export default function Health() {
+    const { tokens } = useTheme();
     const { summary, status, progress, refresh } = useHealthSummary();
 
     return (
@@ -42,6 +43,7 @@ export default function Health() {
 // Header — H2 + Status + Refresh-Button
 // ──────────────────────────────────────────────────────────────────
 function Header({ status, progress, meta, onRefresh }) {
+    const { tokens } = useTheme();
     const subline = (() => {
         if (status === 'parsing') return `Apple Health wird importiert… ${progress}%`;
         if (status === 'loading') return 'Lade…';
@@ -121,6 +123,7 @@ function Header({ status, progress, meta, onRefresh }) {
 // HeroGrid — 4 Kacheln (Sleep / RHR / HRV / Recovery)
 // ──────────────────────────────────────────────────────────────────
 function HeroGrid({ latest }) {
+    const { tokens } = useTheme();
     const tiles = [
         {
             icon: Moon,
@@ -167,6 +170,7 @@ function HeroGrid({ latest }) {
 }
 
 function HeroTile({ icon: Icon, label, value, unit, sub }) {
+    const { tokens } = useTheme();
     return (
         <div
             style={{
@@ -257,6 +261,7 @@ function HeroTile({ icon: Icon, label, value, unit, sub }) {
 // SleepSection — Stage-Bar + 7-Tage Trend
 // ──────────────────────────────────────────────────────────────────
 function SleepSection({ latest }) {
+    const { tokens } = useTheme();
     const { points: trend7 } = useHealthTrend('sleepTotal', 7);
 
     return (
@@ -332,6 +337,7 @@ function SleepSection({ latest }) {
 }
 
 function StageBar({ stages }) {
+    const { tokens } = useTheme();
     const total = (stages.awake || 0) + (stages.rem || 0) + (stages.core || 0) + (stages.deep || 0);
     if (total === 0) return null;
     const segs = [
@@ -365,6 +371,7 @@ function StageBar({ stages }) {
 }
 
 function StageLegend({ stages }) {
+    const { tokens } = useTheme();
     const items = [
         { key: 'Deep',  v: stages.deep,  color: '#6366f1' },
         { key: 'Core',  v: stages.core,  color: tokens.colors.accent.DEFAULT },
@@ -395,6 +402,7 @@ function StageLegend({ stages }) {
 }
 
 function SleepBars({ points }) {
+    const { tokens } = useTheme();
     if (!points.length) return null;
     const max = Math.max(...points.map((p) => p.value));
     return (
@@ -428,6 +436,7 @@ function SleepBars({ points }) {
 // HeartSection — RHR + HRV Sparklines (30 Tage)
 // ──────────────────────────────────────────────────────────────────
 function HeartSection() {
+    const { tokens } = useTheme();
     const { points: rhr } = useHealthTrend('rhr', 30);
     const { points: hrv } = useHealthTrend('hrv', 30);
 
@@ -453,6 +462,7 @@ function HeartSection() {
 }
 
 function SparkCard({ title, unit, points, color, decimals = 0 }) {
+    const { tokens } = useTheme();
     if (!points || !points.length) {
         return (
             <div style={{ ...tokens.glass.card, padding: tokens.spacing.lg }}>
@@ -531,6 +541,7 @@ function SparkCard({ title, unit, points, color, decimals = 0 }) {
 // Status-Cards (no-source / error)
 // ──────────────────────────────────────────────────────────────────
 function NoSourceCard() {
+    const { tokens } = useTheme();
     return (
         <div style={{ ...tokens.glass.card, padding: tokens.spacing.lg }}>
             <p
@@ -562,6 +573,7 @@ function NoSourceCard() {
 }
 
 function ErrorCard() {
+    const { tokens } = useTheme();
     return (
         <div style={{ ...tokens.glass.card, padding: tokens.spacing.lg }}>
             <p
@@ -581,6 +593,7 @@ function ErrorCard() {
 // Shared
 // ──────────────────────────────────────────────────────────────────
 function SectionHeader({ children }) {
+    const { tokens } = useTheme();
     return (
         <h3
             style={{

@@ -13,7 +13,7 @@ import {
     GraduationCap,
     Settings,
 } from "lucide-react";
-import tokens from "../styles/tokens";
+import { useTheme } from "../hooks/useTheme.jsx";
 
 const SIDEBAR_WIDTH = 64;
 const ICON_SIZE = 20;
@@ -29,6 +29,7 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar({ activeTab, onTabChange }) {
+    const { tokens } = useTheme();
     return (
         <aside
             style={{

@@ -8,7 +8,7 @@ import {
     ChevronLeft, ChevronRight, Settings as SettingsIcon, Plus, X,
     Trash2, RefreshCw, ExternalLink, AlertTriangle,
 } from "lucide-react";
-import tokens from "../styles/tokens";
+import { useTheme } from "../hooks/useTheme.jsx";
 import { useCalendar } from "../hooks/useCalendar";
 
 const DAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -58,7 +58,7 @@ function hueFor(str) {
     return h % 360;
 }
 
-function subColor(ev) {
+function subColor(ev, tokens) {
     if (ev.source === "internal") {
         return { fill: tokens.colors.accent.soft, border: tokens.colors.accent.DEFAULT, accent: tokens.colors.accent.DEFAULT };
     }
@@ -77,6 +77,7 @@ function toLocalInputValue(iso) {
 }
 
 export default function Calendar() {
+    const { tokens } = useTheme();
     const cal = useCalendar();
     const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
     const [showSubs, setShowSubs] = useState(false);
@@ -306,6 +307,7 @@ export default function Calendar() {
 
 // ── Event Block ───────────────────────────────────────────────────
 function EventBlock({ ev, hover, onMouseEnter, onMouseLeave, onEdit, onDelete }) {
+    const { tokens } = useTheme();
     const start = new Date(ev.start);
     const end = new Date(ev.end);
     const startMin = start.getHours() * 60 + start.getMinutes();
@@ -314,7 +316,7 @@ function EventBlock({ ev, hover, onMouseEnter, onMouseLeave, onEdit, onDelete })
     const top = (startOffset / 60) * HOUR_HEIGHT;
     const durationMin = Math.max(20, endMin - startMin);
     const height = (durationMin / 60) * HOUR_HEIGHT;
-    const colors = subColor(ev);
+    const colors = subColor(ev, tokens);
     const isWritable = !!ev.writable;
 
     return (
@@ -387,6 +389,7 @@ function EventBlock({ ev, hover, onMouseEnter, onMouseLeave, onEdit, onDelete })
 
 // ── Icon Button ───────────────────────────────────────────────────
 function IconBtn({ children, onClick, title }) {
+    const { tokens } = useTheme();
     return (
         <button
             onClick={onClick}
@@ -410,6 +413,7 @@ function IconBtn({ children, onClick, title }) {
 
 // ── Subscription Drawer ───────────────────────────────────────────
 function SubsDrawer({ cal, onClose }) {
+    const { tokens } = useTheme();
     const [label, setLabel] = useState("");
     const [url, setUrl] = useState("");
     const [adding, setAdding] = useState(false);
@@ -532,13 +536,13 @@ function SubsDrawer({ cal, onClose }) {
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
                     placeholder="Label (z.B. Uni)"
-                    style={inputStyle()}
+                    style={inputStyle(tokens)}
                 />
                 <input
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder="https:// oder webcal://"
-                    style={{ ...inputStyle(), marginTop: 8 }}
+                    style={{ ...inputStyle(tokens), marginTop: 8 }}
                 />
                 {localErr && (
                     <div style={{
@@ -589,6 +593,7 @@ function SubsDrawer({ cal, onClose }) {
 
 // ── iCloud CalDAV Section ─────────────────────────────────────────
 function CalDAVSection({ cal }) {
+    const { tokens } = useTheme();
     const dav = cal.caldav || { connected: false };
     const [appleId, setAppleId] = useState("");
     const [password, setPassword] = useState("");
@@ -645,14 +650,14 @@ function CalDAVSection({ cal }) {
                         value={appleId}
                         onChange={(e) => setAppleId(e.target.value)}
                         placeholder="Apple-ID (E-Mail)"
-                        style={inputStyle()}
+                        style={inputStyle(tokens)}
                     />
                     <input
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="App-spezifisches Passwort"
-                        style={{ ...inputStyle(), marginTop: 8 }}
+                        style={{ ...inputStyle(tokens), marginTop: 8 }}
                     />
                     {err && (
                         <div style={{
@@ -759,6 +764,7 @@ function CalDAVSection({ cal }) {
 }
 
 function SubRow({ sub, onRemove }) {
+    const { tokens } = useTheme();
     const last = sub.lastFetchedAt ? new Date(sub.lastFetchedAt) : null;
     return (
         <div style={{
@@ -813,6 +819,7 @@ function SubRow({ sub, onRemove }) {
 
 // ── Event Modal ───────────────────────────────────────────────────
 function EventModal({ existing, onClose, onSave }) {
+    const { tokens } = useTheme();
     const init = existing || {
         title: "",
         start: new Date().toISOString(),
@@ -885,34 +892,34 @@ function EventModal({ existing, onClose, onSave }) {
                     </button>
                 </div>
 
-                <label style={labelStyle()}>Titel</label>
+                <label style={labelStyle(tokens)}>Titel</label>
                 <input value={title} onChange={(e) => setTitle(e.target.value)}
                     placeholder="z.B. Laufrunde mit Tom"
-                    style={inputStyle()} autoFocus />
+                    style={inputStyle(tokens)} autoFocus />
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
                     <div>
-                        <label style={labelStyle()}>Start</label>
+                        <label style={labelStyle(tokens)}>Start</label>
                         <input type="datetime-local" value={start}
                             onChange={(e) => setStart(e.target.value)}
-                            style={inputStyle()} />
+                            style={inputStyle(tokens)} />
                     </div>
                     <div>
-                        <label style={labelStyle()}>Ende</label>
+                        <label style={labelStyle(tokens)}>Ende</label>
                         <input type="datetime-local" value={end}
                             onChange={(e) => setEnd(e.target.value)}
-                            style={inputStyle()} />
+                            style={inputStyle(tokens)} />
                     </div>
                 </div>
 
-                <label style={{ ...labelStyle(), marginTop: 10 }}>Ort</label>
+                <label style={{ ...labelStyle(tokens), marginTop: 10 }}>Ort</label>
                 <input value={location} onChange={(e) => setLocation(e.target.value)}
-                    placeholder="optional" style={inputStyle()} />
+                    placeholder="optional" style={inputStyle(tokens)} />
 
-                <label style={{ ...labelStyle(), marginTop: 10 }}>Notiz</label>
+                <label style={{ ...labelStyle(tokens), marginTop: 10 }}>Notiz</label>
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)}
                     placeholder="optional" rows={2}
-                    style={{ ...inputStyle(), resize: "vertical" }} />
+                    style={{ ...inputStyle(tokens), resize: "vertical" }} />
 
                 <button
                     onClick={save}
@@ -933,7 +940,7 @@ function EventModal({ existing, onClose, onSave }) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
-function inputStyle() {
+function inputStyle(tokens) {
     return {
         ...tokens.glass.input,
         width: "100%",
@@ -945,7 +952,7 @@ function inputStyle() {
     };
 }
 
-function labelStyle() {
+function labelStyle(tokens) {
     return {
         display: "block",
         fontSize: 10,

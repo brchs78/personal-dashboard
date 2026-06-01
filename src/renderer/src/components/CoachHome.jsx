@@ -6,7 +6,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Mic, Trash2 } from "lucide-react";
 import useCoachChat from "../hooks/useCoachChat";
-import tokens from "../styles/tokens";
+import { useTheme } from "../hooks/useTheme.jsx";
 import VoiceMode from "./VoiceMode";
 
 const getKey = () =>
@@ -45,6 +45,7 @@ function toolPillLabel(ev) {
 }
 
 function ToolPill({ ev }) {
+    const { tokens } = useTheme();
     return (
         <span
             style={{
@@ -74,6 +75,7 @@ const QUICK_CHIPS = [
 ];
 
 export default function CoachHome() {
+    const { tokens } = useTheme();
     const coach = useCoachChat();
     const [chatTxt, setChatTxt] = useState("");
     const [voiceOpen, setVoiceOpen] = useState(false);

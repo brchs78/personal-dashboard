@@ -6,7 +6,7 @@
 // - Animierter Magenta-Indigo-Orb
 
 import { useEffect, useRef, useState } from "react";
-import tokens from "../styles/tokens";
+import { useTheme } from "../hooks/useTheme.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Mic, MicOff } from "lucide-react";
 
@@ -22,6 +22,7 @@ const STATE_LABEL = {
 };
 
 export default function VoiceMode({ coach, apiKey, onClose }) {
+    const { tokens } = useTheme();
     const [vState, setVState] = useState("idle");
     const [live, setLive] = useState("");
     const [errMsg, setErrMsg] = useState("");

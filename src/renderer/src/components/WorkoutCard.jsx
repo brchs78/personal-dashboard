@@ -12,7 +12,7 @@ import {
     Check,
     Circle,
 } from "lucide-react";
-import tokens from "../styles/tokens";
+import { useTheme } from "../hooks/useTheme.jsx";
 
 // Mapping Workout-Typ → lucide-Icon
 function getTypeIcon(type) {
@@ -41,6 +41,7 @@ export default function WorkoutCard({
     status = "open",
     onClick,
 }) {
+    const { tokens } = useTheme();
     const Icon = getTypeIcon(type);
     const isDone = status === "done";
     const interactive = typeof onClick === "function";
@@ -177,6 +178,7 @@ export default function WorkoutCard({
 // StatusBadge — Pill oben rechts, „Erledigt" oder „Offen"
 // ──────────────────────────────────────────────────────────────────
 function StatusBadge({ isDone }) {
+    const { tokens } = useTheme();
     const baseStyle = {
         display: "inline-flex",
         alignItems: "center",

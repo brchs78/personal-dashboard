@@ -9,22 +9,28 @@ import {
     CalendarRange, CalendarClock, ListTodo,
 } from 'lucide-react';
 import { useTodos } from '../hooks/useTodos';
-import tokens from '../styles/tokens';
+import { useTheme } from "../hooks/useTheme.jsx";
 
-const CATEGORIES = [
-    { id: 'uni',     label: 'Uni',     color: tokens.colors.tab.body },
-    { id: 'sport',   label: 'Sport',   color: tokens.colors.accent.DEFAULT },
-    { id: 'life',    label: 'Life',    color: '#34d399' },
-    { id: 'errands', label: 'Errands', color: '#60a5fa' },
-];
+function getCategories(tokens) {
+    return [
+        { id: 'uni',     label: 'Uni',     color: tokens.colors.tab.body },
+        { id: 'sport',   label: 'Sport',   color: tokens.colors.accent.DEFAULT },
+        { id: 'life',    label: 'Life',    color: '#34d399' },
+        { id: 'errands', label: 'Errands', color: '#60a5fa' },
+    ];
+}
 
-const CATEGORY_MAP = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
+function getCategoryMap(tokens) {
+    return Object.fromEntries(getCategories(tokens).map((c) => [c.id, c]));
+}
 
-const PRIORITY_COLOR = {
-    1: tokens.colors.status.danger,
-    2: tokens.colors.status.warning,
-    3: tokens.colors.text.tertiary,
-};
+function getPriorityColor(tokens) {
+    return {
+        1: tokens.colors.status.danger,
+        2: tokens.colors.status.warning,
+        3: tokens.colors.text.tertiary,
+    };
+}
 
 const FILTERS = [
     { id: 'all',     label: 'Alle' },
@@ -82,6 +88,7 @@ function sortItems(items) {
 // ─────────────────────────────────────────────────────────────
 
 export default function Todos() {
+    const { tokens } = useTheme();
     const { items, ready, add, update, remove, toggleDone, reorder } = useTodos();
     const [filter, setFilter] = useState('all');
     const [adding, setAdding] = useState(false);
@@ -131,7 +138,7 @@ export default function Todos() {
         push('later', 'Später', CalendarRange, tokens.colors.text.secondary, buckets.later);
         push('inbox', 'Inbox', Inbox, tokens.colors.text.secondary, buckets.inbox);
         return list;
-    }, [filter, buckets]);
+    }, [filter, buckets, tokens]);
 
     return (
         <div style={{
@@ -192,6 +199,7 @@ export default function Todos() {
 // ─────────────────────────────────────────────────────────────
 
 function Header({ openCount, todayCount, overdueCount, adding, onToggleAdd }) {
+    const { tokens } = useTheme();
     return (
         <div style={{
             display: 'flex',
@@ -253,6 +261,8 @@ function Header({ openCount, todayCount, overdueCount, adding, onToggleAdd }) {
 // ─────────────────────────────────────────────────────────────
 
 function AddBar({ onSubmit }) {
+    const { tokens } = useTheme();
+    const CATEGORIES = getCategories(tokens);
     const [title, setTitle] = useState('');
     const [category, setCategory] = useState('life');
     const [priority, setPriority] = useState(2);
@@ -330,6 +340,8 @@ function AddBar({ onSubmit }) {
 }
 
 function CategorySelect({ value, onChange }) {
+    const { tokens } = useTheme();
+    const CATEGORIES = getCategories(tokens);
     return (
         <select
             value={value}
@@ -350,6 +362,8 @@ function CategorySelect({ value, onChange }) {
 }
 
 function PrioritySelect({ value, onChange }) {
+    const { tokens } = useTheme();
+    const PRIORITY_COLOR = getPriorityColor(tokens);
     return (
         <select
             value={value}
@@ -376,6 +390,7 @@ function PrioritySelect({ value, onChange }) {
 // ─────────────────────────────────────────────────────────────
 
 function FilterStrip({ filter, onChange, buckets }) {
+    const { tokens } = useTheme();
     const counts = {
         all:   buckets.overdue.length + buckets.today.length + buckets.week.length + buckets.later.length + buckets.inbox.length,
         today: buckets.overdue.length + buckets.today.length,
@@ -425,6 +440,7 @@ function FilterStrip({ filter, onChange, buckets }) {
 // ─────────────────────────────────────────────────────────────
 
 function BucketSection({ bucket, onToggle, onRemove, onUpdate, onReorder }) {
+    const { tokens } = useTheme();
     const Icon = bucket.icon;
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm }}>
@@ -478,6 +494,9 @@ function BucketSection({ bucket, onToggle, onRemove, onUpdate, onReorder }) {
 // ─────────────────────────────────────────────────────────────
 
 function TodoItem({ item, onToggle, onRemove, onUpdate }) {
+    const { tokens } = useTheme();
+    const CATEGORY_MAP = getCategoryMap(tokens);
+    const PRIORITY_COLOR = getPriorityColor(tokens);
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(item.title);
     const [hover, setHover] = useState(false);
@@ -632,6 +651,7 @@ function TodoItem({ item, onToggle, onRemove, onUpdate }) {
 }
 
 function Pill({ color, label, soft }) {
+    const { tokens } = useTheme();
     return (
         <span style={{
             fontSize: 10,
@@ -654,6 +674,7 @@ function Pill({ color, label, soft }) {
 // ─────────────────────────────────────────────────────────────
 
 function EmptyState({ onAdd }) {
+    const { tokens } = useTheme();
     return (
         <div style={{
             ...tokens.glass.card,
@@ -695,6 +716,7 @@ function EmptyState({ onAdd }) {
 }
 
 function SoftEmpty({ label }) {
+    const { tokens } = useTheme();
     return (
         <div style={{
             ...tokens.glass.card,

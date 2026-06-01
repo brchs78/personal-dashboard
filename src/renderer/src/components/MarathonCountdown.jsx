@@ -3,7 +3,7 @@
 // Bewusst klein gehalten — Workouts haben Dashboard-Priorität.
 
 import { Flag } from "lucide-react";
-import tokens from "../styles/tokens";
+import { useTheme } from "../hooks/useTheme.jsx";
 
 const DEFAULT_TARGET = "2026-10-11";
 const DEFAULT_LOCATION = "München";
@@ -25,6 +25,7 @@ export default function MarathonCountdown({
     targetDate = DEFAULT_TARGET,
     location = DEFAULT_LOCATION,
 }) {
+    const { tokens } = useTheme();
     const days = daysUntil(targetDate);
     const dateLabel = new Date(targetDate + "T00:00:00").toLocaleDateString(
         "de-DE",

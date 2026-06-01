@@ -3,9 +3,10 @@
 
 import { Link2, RefreshCw, Unlink, ExternalLink } from 'lucide-react';
 import { useStrava } from '../hooks/useStrava';
-import tokens from '../styles/tokens';
+import { useTheme } from "../hooks/useTheme.jsx";
 
 export default function StravaSection() {
+    const { tokens } = useTheme();
     const { status, activities, lastSync, busy, error, connect, disconnect, sync } = useStrava();
 
     return (
@@ -28,6 +29,7 @@ export default function StravaSection() {
 }
 
 function Header({ connected, athlete, lastSync, busy, onConnect, onDisconnect, onSync }) {
+    const { tokens } = useTheme();
     return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: tokens.spacing.lg, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -69,6 +71,7 @@ function Header({ connected, athlete, lastSync, busy, onConnect, onDisconnect, o
 }
 
 function NotConnectedCard({ onConnect, busy }) {
+    const { tokens } = useTheme();
     return (
         <div style={{
             ...tokens.glass.card,
@@ -112,6 +115,7 @@ function NotConnectedCard({ onConnect, busy }) {
 }
 
 function EmptyCard({ onSync }) {
+    const { tokens } = useTheme();
     return (
         <div style={{ ...tokens.glass.card, padding: tokens.spacing.lg }}>
             <p style={{ margin: 0, fontSize: tokens.typography.fontSize.sm, color: tokens.colors.text.secondary }}>
@@ -122,6 +126,7 @@ function EmptyCard({ onSync }) {
 }
 
 function ErrorCard({ message }) {
+    const { tokens } = useTheme();
     return (
         <div style={{ ...tokens.glass.card, padding: tokens.spacing.md, borderColor: tokens.colors.status.danger }}>
             <p style={{ margin: 0, fontSize: tokens.typography.fontSize.sm, color: tokens.colors.status.danger }}>
@@ -132,6 +137,7 @@ function ErrorCard({ message }) {
 }
 
 function ActivityList({ items }) {
+    const { tokens } = useTheme();
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm }}>
             {items.slice(0, 20).map((a) => <ActivityRow key={a.id} a={a} />)}
@@ -140,6 +146,7 @@ function ActivityList({ items }) {
 }
 
 function ActivityRow({ a }) {
+    const { tokens } = useTheme();
     const km = (a.distance / 1000);
     const pace = paceFromMps(a.average_speed);
     const date = new Date(a.start_date_local);
@@ -188,6 +195,7 @@ function ActivityRow({ a }) {
 }
 
 function Stat({ label, value }) {
+    const { tokens } = useTheme();
     return (
         <div style={{ textAlign: 'right' }}>
             <div style={{
@@ -205,6 +213,7 @@ function Stat({ label, value }) {
 }
 
 function IconButton({ children, onClick, disabled, title }) {
+    const { tokens } = useTheme();
     return (
         <button type="button" onClick={onClick} disabled={disabled} title={title}
             style={{
