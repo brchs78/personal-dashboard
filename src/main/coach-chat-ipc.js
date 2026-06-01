@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { chat } = require('./coach-chat.js');
 const todoStore = require('./todo-store.js');
+const calendarStore = require('./calendar-store.js');
 
 function broadcast(win, channel, payload) {
     if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
@@ -54,6 +55,10 @@ function init(getWindow, { getHealthSummary } = {}) {
         const ctx = {
             getHealthSummary: getHealthSummary || (() => null),
             broadcastTodos: () => broadcast(getWindow(), 'todo:updated', todoStore.loadAll()),
+            broadcastCalendar: () => broadcast(getWindow(), 'calendar:updated', {
+                subscriptions: calendarStore.loadSubscriptions(),
+                events: calendarStore.loadAllEvents(),
+            }),
             onToolEvent: (ev) => broadcast(getWindow(), 'coach:tool-event', ev),
         };
         try {

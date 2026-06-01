@@ -3,6 +3,7 @@
 
 const todoStore = require('./todo-store.js');
 const coachPlanStore = require('./coach-plan-store.js');
+const calendarStore = require('./calendar-store.js');
 
 const TOOLS = [
     {
@@ -82,6 +83,64 @@ const TOOLS = [
         description: 'Hole den aktuellen Recovery-Snapshot (RHR, HRV, Schlaf, HR-Recovery 1min). Liefert null wenn keine Health-Daten verfügbar.',
         input_schema: { type: 'object', properties: {} },
     },
+    {
+        name: 'list_calendar_events',
+        description: 'Liste Kalendertermine im Zeitraum. Liefert externe (read-only) UND interne (Coach-erstellte) Events. Default = aktuelle Woche.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                from: { type: 'string', description: 'ISO 8601 Start (default: heute 00:00).' },
+                to: { type: 'string', description: 'ISO 8601 Ende (default: in 7 Tagen).' },
+            },
+        },
+    },
+    {
+        name: 'create_calendar_event',
+        description: 'Lege einen internen Kalendertermin an. Default-Dauer 60 Minuten falls end fehlt.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                title: { type: 'string' },
+                start: { type: 'string', description: 'ISO 8601 Startzeitpunkt.' },
+                end: { type: 'string', description: 'ISO 8601 Endzeitpunkt (optional, default +60min).' },
+                allDay: { type: 'boolean' },
+                location: { type: 'string' },
+                description: { type: 'string' },
+            },
+            required: ['title', 'start'],
+        },
+    },
+    {
+        name: 'update_calendar_event',
+        description: 'Aktualisiere einen internen Kalendertermin. Externe Subscription-Events sind read-only.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                patch: {
+                    type: 'object',
+                    properties: {
+                        title: { type: 'string' },
+                        start: { type: 'string' },
+                        end: { type: 'string' },
+                        allDay: { type: 'boolean' },
+                        location: { type: 'string' },
+                        description: { type: 'string' },
+                    },
+                },
+            },
+            required: ['id', 'patch'],
+        },
+    },
+    {
+        name: 'delete_calendar_event',
+        description: 'Lösche einen internen Kalendertermin. Externe Subscription-Events können nicht gelöscht werden.',
+        input_schema: {
+            type: 'object',
+            properties: { id: { type: 'string' } },
+            required: ['id'],
+        },
+    },
 ];
 
 function todayISO() {
@@ -115,7 +174,7 @@ function filterTodos(items, { include_done = false, filter = 'all' } = {}) {
 }
 
 async function dispatch(name, input, ctx = {}) {
-    const { getHealthSummary, broadcastTodos } = ctx;
+    const { getHealthSummary, broadcastTodos, broadcastCalendar } = ctx;
     const args = input || {};
     switch (name) {
         case 'list_todos': {
@@ -185,6 +244,56 @@ async function dispatch(name, input, ctx = {}) {
                     stages: l.sleep.stages || null,
                 } : null,
             };
+        }
+        case 'list_calendar_events': {
+            const now = new Date();
+            const from = args.from ? new Date(args.from) : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const to = args.to ? new Date(args.to) : new Date(from.getTime() + 7 * 86400_000);
+            const events = calendarStore.loadAllForRange(from.toISOString(), to.toISOString())
+                .map((e) => ({
+                    id: e.id,
+                    title: e.title,
+                    start: e.start,
+                    end: e.end,
+                    allDay: !!e.allDay,
+                    location: e.location || '',
+                    source: e.source,
+                    sourceLabel: e.sourceLabel || null,
+                }));
+            return { events, total: events.length };
+        }
+        case 'create_calendar_event': {
+            if (!args.title || !args.start) throw new Error('missing_title_or_start');
+            const ev = calendarStore.addInternalEvent(args);
+            broadcastCalendar?.();
+            return ev;
+        }
+        case 'update_calendar_event': {
+            const { id, patch } = args;
+            if (!id) throw new Error('missing_id');
+            const cur = calendarStore.findInternalEvent(id);
+            if (!cur) {
+                // Prüfen ob das Event aus einer Subscription stammt
+                const ext = calendarStore.getAllSubscriptionEvents().find((e) => e.id === id);
+                if (ext) throw new Error('event_is_read_only_subscription');
+                throw new Error(`event_not_found: ${id}`);
+            }
+            const ev = calendarStore.updateInternalEvent(id, patch || {});
+            broadcastCalendar?.();
+            return ev;
+        }
+        case 'delete_calendar_event': {
+            const { id } = args;
+            if (!id) throw new Error('missing_id');
+            const cur = calendarStore.findInternalEvent(id);
+            if (!cur) {
+                const ext = calendarStore.getAllSubscriptionEvents().find((e) => e.id === id);
+                if (ext) throw new Error('event_is_read_only_subscription');
+                throw new Error(`event_not_found: ${id}`);
+            }
+            const r = calendarStore.deleteInternalEvent(id);
+            broadcastCalendar?.();
+            return r;
         }
         default:
             throw new Error(`unknown_tool: ${name}`);

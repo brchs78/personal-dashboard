@@ -45,4 +45,15 @@ contextBridge.exposeInMainWorld('oleAPI', {
         onHistoryUpdated: (cb) => ipcRenderer.on('coach:history-updated', (_e, payload) => cb(payload)),
         onToolEvent:      (cb) => ipcRenderer.on('coach:tool-event', (_e, payload) => cb(payload)),
     },
+    calendar: {
+        list:           () => ipcRenderer.invoke('calendar:list'),
+        refreshNow:     () => ipcRenderer.invoke('calendar:refresh-now'),
+        listSubs:       () => ipcRenderer.invoke('calendar:list-subs'),
+        addSub:         ({ label, url }) => ipcRenderer.invoke('calendar:add-sub', { label, url }),
+        removeSub:      (id) => ipcRenderer.invoke('calendar:remove-sub', id),
+        addInternal:    (partial) => ipcRenderer.invoke('calendar:add-internal', partial),
+        updateInternal: (id, patch) => ipcRenderer.invoke('calendar:update-internal', { id, patch }),
+        deleteInternal: (id) => ipcRenderer.invoke('calendar:delete-internal', id),
+        onUpdated:      (cb) => ipcRenderer.on('calendar:updated', (_e, payload) => cb(payload)),
+    },
 })

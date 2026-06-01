@@ -3,6 +3,7 @@ import Sidebar from "./components/Sidebar";
 import CoachHome from "./components/CoachHome";
 import Health from "./components/Health";
 import TrainingPlan from "./components/TrainingPlan";
+import Calendar from "./components/Calendar";
 import Todos from "./components/Todos";
 import tokens from "./styles/tokens";
 
@@ -339,8 +340,11 @@ export default function App() {
             {/* ── HEALTH ── */}
             {tab === "health" && <Health />}
 
+            {/* ── CALENDAR ── */}
+            {tab === "cal" && <Calendar />}
+
             {/* ── TRAINING PLAN ── */}
-            {tab === "plan" && <TrainingPlan />}
+            {tab === "training" && <TrainingPlan />}
 
             {/* ── TODO ── */}
             {tab === "todo" && <Todos />}
