@@ -139,8 +139,9 @@ const spacing = {
 // ──────────────────────────────────────────────────────────────────
 const typography = {
   fontFamily: {
-    sans: '-apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text", "Segoe UI", system-ui, sans-serif',
-    display: '"SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", sans-serif',
+    sans: "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
+    serif: "'Newsreader', 'Charter', 'Georgia', serif",
+    display: "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
     mono: '"SF Mono", "JetBrains Mono", ui-monospace, monospace',
   },
   fontSize: {

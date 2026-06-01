@@ -1,5 +1,6 @@
 :root {
-    --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+    --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-serif: 'Newsreader', 'Charter', 'Georgia', serif;
     --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
 
     --color-background-primary: #0a0d1a;
@@ -22,6 +23,7 @@
 body {
     margin: 0;
     font-family: var(--font-sans);
+    letter-spacing: -0.01em;
     background: #0a0d1a;
     color: var(--color-text-primary);
     -webkit-font-smoothing: antialiased;
