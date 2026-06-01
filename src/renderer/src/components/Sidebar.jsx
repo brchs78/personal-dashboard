@@ -91,6 +91,7 @@ export default function Sidebar({ activeTab, onTabChange }) {
 // Logo — kleines "O" mit Gold-Tint
 // ──────────────────────────────────────────────────────────────────
 function Logo() {
+    const { tokens } = useTheme();
     return (
         <div
             style={{
@@ -120,6 +121,7 @@ function Logo() {
 // NavButton — Icon-Button mit Active-State + Hover/Tap-Animation
 // ──────────────────────────────────────────────────────────────────
 function NavButton({ icon: Icon, label, isActive, onClick }) {
+    const { tokens } = useTheme();
     return (
         <motion.button
             type="button"

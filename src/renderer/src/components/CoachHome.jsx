@@ -157,6 +157,7 @@ export default function CoachHome() {
 // Empty State — zentriertes Greeting + Textarea + Quick-Chips
 // ──────────────────────────────────────────────────────────────────
 function EmptyState({ chatTxt, setChatTxt, taRef, onKeyDown, send, apiKey, sttAvailable, onOpenVoice }) {
+    const { tokens } = useTheme();
     return (
         <div
             style={{
@@ -249,6 +250,7 @@ function EmptyState({ chatTxt, setChatTxt, taRef, onKeyDown, send, apiKey, sttAv
 // Chat State — Messages-Liste + sticky Input
 // ──────────────────────────────────────────────────────────────────
 function ChatState({ coach, endRef, chatTxt, setChatTxt, taRef, onKeyDown, send, apiKey, sttAvailable, onOpenVoice }) {
+    const { tokens } = useTheme();
     return (
         <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, maxWidth: 720, width: "100%", margin: "0 auto" }}>
             <div
@@ -386,6 +388,7 @@ function ChatState({ coach, endRef, chatTxt, setChatTxt, taRef, onKeyDown, send,
 // ChatInput — geteilt zwischen Empty und Chat State
 // ──────────────────────────────────────────────────────────────────
 function ChatInput({ chatTxt, setChatTxt, taRef, onKeyDown, send, busy, apiKey, sttAvailable, onOpenVoice }) {
+    const { tokens } = useTheme();
     const canSend = !busy && chatTxt.trim() && apiKey;
     return (
         <div
