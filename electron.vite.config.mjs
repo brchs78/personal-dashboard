@@ -28,6 +28,8 @@ export default defineConfig({
                     "calendar-caldav": resolve("src/main/calendar-caldav.js"),
                     "calendar-sync": resolve("src/main/calendar-sync.js"),
                     "calendar-ipc": resolve("src/main/calendar-ipc.js"),
+                    "habit-store": resolve("src/main/habit-store.js"),
+                    "habit-ipc": resolve("src/main/habit-ipc.js"),
                 },
             },
         },
