@@ -9,6 +9,7 @@ const coachPlanIPC = require('./coach-plan-ipc.js')
 const todoIPC = require('./todo-ipc.js')
 const coachChatIPC = require('./coach-chat-ipc.js')
 const calendarIPC = require('./calendar-ipc.js')
+const habitIPC = require('./habit-ipc.js')
 
 let mainWindow = null
 let tray = null
@@ -119,6 +120,7 @@ app.whenReady().then(() => {
         getHealthTrend: healthIPC.getTrend,
     })
     todoIPC.init(() => mainWindow)
+    habitIPC.init(() => mainWindow)
     calendarIPC.init(() => mainWindow)
     coachChatIPC.init(() => mainWindow, {
         getHealthSummary: healthIPC.getCurrentSummary,

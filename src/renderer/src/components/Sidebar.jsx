@@ -10,6 +10,7 @@ import {
     Dumbbell,
     Activity,
     ListTodo,
+    Flame,
     GraduationCap,
     Settings,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
     { id: "training", icon: Dumbbell, label: "Training" },
     { id: "health", icon: Activity, label: "Health" },
     { id: "todo", icon: ListTodo, label: "ToDo" },
+    { id: "habit", icon: Flame, label: "Habits" },
     { id: "uni", icon: GraduationCap, label: "Uni" },
 ];
 

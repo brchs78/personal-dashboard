@@ -47,6 +47,13 @@ contextBridge.exposeInMainWorld('oleAPI', {
         migrate:    (legacyItems) => ipcRenderer.invoke('todo:migrate', legacyItems),
         onUpdated:  (cb) => on('todo:updated', cb),
     },
+    habit: {
+        getAll:    ()                      => ipcRenderer.invoke('habit:get-all'),
+        add:       (partial)               => ipcRenderer.invoke('habit:add', partial),
+        remove:    ({ id })                => ipcRenderer.invoke('habit:remove', { id }),
+        checkin:   ({ id, date, done })    => ipcRenderer.invoke('habit:checkin', { id, date, done }),
+        onUpdated: (cb) => on('habit:updated', cb),
+    },
     coach: {
         send:             ({ apiKey, userMessage }) => ipcRenderer.invoke('coach:send', { apiKey, userMessage }),
         clear:            () => ipcRenderer.invoke('coach:clear'),

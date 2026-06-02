@@ -5,6 +5,7 @@ import Health from "./components/Health";
 import TrainingPlan from "./components/TrainingPlan";
 import Calendar from "./components/Calendar";
 import Todos from "./components/Todos";
+import HabitHub from "./components/HabitHub";
 import { useTheme } from "./hooks/useTheme.jsx";
 
 // ── Speicher-Adapter: nutzt window.storage (Claude) oder localStorage (Electron) ──
@@ -153,7 +154,7 @@ export default function App() {
         const onKey = (e) => { if (e.key === "Escape" && window.oleAPI) window.oleAPI.hideWindow(); };
         window.addEventListener("keydown", onKey);
         // Reagiere auf automatische Morgen-Routine
-        if (window.oleAPI?.onRoutine) window.oleAPI.onRoutine((id) => { if (id === "morning") { setTab("dash"); genPlan(); } });
+        if (window.oleAPI?.onRoutine) window.oleAPI.onRoutine((id) => { if (id === "morning") { setTab("dash"); genPlan(); } if (id === "evening") { setTab("habit"); } });
         return () => { clearInterval(pomRef.current); window.removeEventListener("keydown", onKey); };
     }, []);
     useEffect(() => {
@@ -371,6 +372,9 @@ export default function App() {
 
             {/* ── TODO ── */}
             {tab === "todo" && <Todos />}
+
+            {/* ── HABITS ── */}
+            {tab === "habit" && <HabitHub />}
 
             {/* ── BODY ── */}
             {tab === "body" && (

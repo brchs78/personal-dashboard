@@ -5,6 +5,7 @@ const todoStore = require('./todo-store.js');
 const coachPlanStore = require('./coach-plan-store.js');
 const calendarStore = require('./calendar-store.js');
 const calendarCaldav = require('./calendar-caldav.js');
+const habitStore = require('./habit-store.js');
 
 const TOOLS = [
     {
@@ -141,6 +142,29 @@ const TOOLS = [
             properties: { id: { type: 'string' } },
             required: ['id'],
         },
+    },
+    {
+        name: 'list_habits',
+        description: 'Gibt alle aktiven Gewohnheiten (Habits) zurück inkl. heutigem Completion-Status, aktuellem Streak und Checkin-History der letzten 14 Tage.',
+        input_schema: { type: 'object', properties: {} },
+    },
+    {
+        name: 'log_habit',
+        description: 'Markiert eine Gewohnheit für ein bestimmtes Datum als erledigt oder nicht erledigt.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                id:   { type: 'string', description: 'Habit-ID aus list_habits.' },
+                date: { type: 'string', description: 'YYYY-MM-DD — wenn weggelassen wird heute verwendet.' },
+                done: { type: 'boolean', description: 'true = erledigt, false = rückgängig machen.' },
+            },
+            required: ['id', 'done'],
+        },
+    },
+    {
+        name: 'get_habit_summary',
+        description: 'Gibt eine Zusammenfassung aller aktiven Gewohnheiten: aktueller Streak, beste Streak, Completion-Rate letzte 7 und 30 Tage.',
+        input_schema: { type: 'object', properties: {} },
     },
 ];
 
@@ -320,6 +344,48 @@ async function dispatch(name, input, ctx = {}) {
             const r = calendarStore.deleteInternalEvent(id);
             broadcastCalendar?.();
             return r;
+        }
+        case 'list_habits': {
+            const { habits, checkins } = habitStore.getAll();
+            const streaks = habitStore.getStreaks();
+            const today = todayISO();
+            const active = habits.filter((h) => !h.archived);
+            // Build 14-day history per habit
+            const history14 = [];
+            for (let i = 13; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                history14.push(d.toISOString().slice(0, 10));
+            }
+            return {
+                habits: active.map((h) => ({
+                    id: h.id,
+                    name: h.name,
+                    emoji: h.emoji,
+                    identity: h.identity,
+                    category: h.category,
+                    streak: streaks[h.id] || 0,
+                    doneToday: Array.isArray(checkins[today]) && checkins[today].includes(h.id),
+                    last14days: history14.map((d) => ({
+                        date: d,
+                        done: Array.isArray(checkins[d]) && checkins[d].includes(h.id),
+                    })),
+                })),
+                todayScore: {
+                    done: (checkins[today] || []).filter((id) => active.some((h) => h.id === id)).length,
+                    total: active.length,
+                },
+            };
+        }
+        case 'log_habit': {
+            const { id, date, done } = args;
+            if (!id) throw new Error('missing_id');
+            const d = date || todayISO();
+            habitStore.checkin(id, d, done);
+            return { ok: true, id, date: d, done };
+        }
+        case 'get_habit_summary': {
+            return habitStore.getStats(30);
         }
         default:
             throw new Error(`unknown_tool: ${name}`);
