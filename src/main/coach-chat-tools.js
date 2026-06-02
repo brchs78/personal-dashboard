@@ -6,6 +6,8 @@ const coachPlanStore = require('./coach-plan-store.js');
 const calendarStore = require('./calendar-store.js');
 const calendarCaldav = require('./calendar-caldav.js');
 const habitStore = require('./habit-store.js');
+const stravaClient = require('./strava-client.js');
+const stravaStore = require('./strava-store.js');
 
 const TOOLS = [
     {
@@ -166,6 +168,28 @@ const TOOLS = [
         description: 'Gibt eine Zusammenfassung aller aktiven Gewohnheiten: aktueller Streak, beste Streak, Completion-Rate letzte 7 und 30 Tage.',
         input_schema: { type: 'object', properties: {} },
     },
+    {
+        name: 'get_recent_activities',
+        description: 'Hole Oles letzte Strava-Aktivitäten. Default: letzte 7 Tage. Liefert Typ, Distanz, Pace, Herzfrequenz, Datum etc.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                days: { type: 'integer', description: 'Zeitraum in Tagen rückwärts (default 7, max 90).' },
+                type: { type: 'string', description: 'Aktivitätstyp filtern, z.B. "Run", "Ride", "IceHockey". Leer = alle.' },
+            },
+        },
+    },
+    {
+        name: 'get_activity_detail',
+        description: 'Hole Detail-Daten einer einzelnen Strava-Aktivität (Splits, HR-Zonen, Pace, Elevation, Laps). Braucht die Activity-ID aus get_recent_activities.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'number', description: 'Strava Activity ID.' },
+            },
+            required: ['id'],
+        },
+    },
 ];
 
 function todayISO() {
@@ -201,6 +225,13 @@ function filterTodos(items, { include_done = false, filter = 'all' } = {}) {
 function caldavWriteEnabled() {
     const a = calendarStore.loadCalDAVAccount();
     return a.connected && !!a.targetCalendarUrl;
+}
+
+function getStravaCreds() {
+    const clientId = process.env.STRAVA_CLIENT_ID;
+    const clientSecret = process.env.STRAVA_CLIENT_SECRET;
+    if (!clientId || !clientSecret) return null;
+    return { clientId, clientSecret };
 }
 
 async function dispatch(name, input, ctx = {}) {
@@ -386,6 +417,88 @@ async function dispatch(name, input, ctx = {}) {
         }
         case 'get_habit_summary': {
             return habitStore.getStats(30);
+        }
+        case 'get_recent_activities': {
+            const creds = getStravaCreds();
+            if (!creds) return { error: 'strava_not_configured', activities: [] };
+            const tokens = stravaStore.loadTokens();
+            if (!tokens) return { error: 'strava_not_connected', activities: [] };
+            const days = Math.min(args.days || 7, 90);
+            const after = Math.floor(Date.now() / 1000) - days * 86400;
+            try {
+                const raw = await stravaClient.listActivities(creds, { perPage: 50, after });
+                let activities = raw.map((a) => ({
+                    id: a.id,
+                    name: a.name,
+                    type: a.type,
+                    sport_type: a.sport_type,
+                    date: a.start_date_local,
+                    distance_km: +(a.distance / 1000).toFixed(2),
+                    moving_time_min: +(a.moving_time / 60).toFixed(1),
+                    elapsed_time_min: +(a.elapsed_time / 60).toFixed(1),
+                    pace_min_km: a.distance > 0 ? +((a.moving_time / 60) / (a.distance / 1000)).toFixed(2) : null,
+                    avg_heartrate: a.average_heartrate || null,
+                    max_heartrate: a.max_heartrate || null,
+                    total_elevation_m: a.total_elevation_gain || 0,
+                    avg_speed_kmh: a.average_speed ? +(a.average_speed * 3.6).toFixed(1) : null,
+                    suffer_score: a.suffer_score || null,
+                    calories: a.calories || null,
+                }));
+                if (args.type) {
+                    const t = args.type.toLowerCase();
+                    activities = activities.filter((a) =>
+                        a.type?.toLowerCase() === t || a.sport_type?.toLowerCase() === t
+                    );
+                }
+                return { activities, count: activities.length };
+            } catch (e) {
+                return { error: String(e?.message || e), activities: [] };
+            }
+        }
+        case 'get_activity_detail': {
+            const creds = getStravaCreds();
+            if (!creds) return { error: 'strava_not_configured' };
+            const tokens = stravaStore.loadTokens();
+            if (!tokens) return { error: 'strava_not_connected' };
+            if (!args.id) throw new Error('missing_activity_id');
+            try {
+                const a = await stravaClient.getActivity(creds, args.id);
+                return {
+                    id: a.id,
+                    name: a.name,
+                    type: a.type,
+                    sport_type: a.sport_type,
+                    date: a.start_date_local,
+                    distance_km: +(a.distance / 1000).toFixed(2),
+                    moving_time_min: +(a.moving_time / 60).toFixed(1),
+                    pace_min_km: a.distance > 0 ? +((a.moving_time / 60) / (a.distance / 1000)).toFixed(2) : null,
+                    avg_heartrate: a.average_heartrate || null,
+                    max_heartrate: a.max_heartrate || null,
+                    total_elevation_m: a.total_elevation_gain || 0,
+                    calories: a.calories || null,
+                    suffer_score: a.suffer_score || null,
+                    description: a.description || null,
+                    splits_metric: (a.splits_metric || []).map((s) => ({
+                        km: s.split,
+                        time_sec: s.moving_time,
+                        pace_min_km: s.moving_time ? +(s.moving_time / 60).toFixed(2) : null,
+                        avg_heartrate: s.average_heartrate || null,
+                        elevation_diff: s.elevation_difference || 0,
+                    })),
+                    laps: (a.laps || []).map((l) => ({
+                        name: l.name,
+                        distance_km: +(l.distance / 1000).toFixed(2),
+                        time_min: +(l.moving_time / 60).toFixed(1),
+                        avg_heartrate: l.average_heartrate || null,
+                        max_heartrate: l.max_heartrate || null,
+                        pace_min_km: l.distance > 0 ? +((l.moving_time / 60) / (l.distance / 1000)).toFixed(2) : null,
+                    })),
+                    has_heartrate: a.has_heartrate || false,
+                    device_name: a.device_name || null,
+                };
+            } catch (e) {
+                return { error: String(e?.message || e) };
+            }
         }
         default:
             throw new Error(`unknown_tool: ${name}`);

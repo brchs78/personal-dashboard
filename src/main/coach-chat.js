@@ -3,6 +3,7 @@
 // Bricht nach MAX_LOOP Iterationen mit Fehler ab.
 
 const { TOOLS, dispatch } = require('./coach-chat-tools.js');
+const stravaStore = require('./strava-store.js');
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-5';
@@ -16,15 +17,16 @@ function todayISO() {
 const BASE_PROFILE = `Du bist Oles persönlicher KI-Sportcoach und Life-Optimierer.
 IDENTITÄT: Ole, VWL-Student 2. Semester, LMU München. 193cm, 72kg.
 TRAINING: Volume over Speed. Marathon Sub 3:10h (Pace 4:30/km) am 11.10.2026. Zone-2-Laufen ist Kern. Aktuell Phase 1 Base-Building.
-WOCHE: Mo Easy+Yoga · Di Hockey · Mi Easy+Gym · Do Hockey · Fr Rad · Sa Long Run · So Rest. Lauf-km nur Mo/Mi/Sa.
-STATUS: Post-Weisheitszahn-OP + Antibiotika. Erlaubt: Zone 1-2, Hockey, Rad, Yoga. Verboten: Pool, Schwerheben, Max-Intensität.`;
+WOCHE: Mo Easy+Yoga · Di Hockey · Mi Easy+Gym · Do Hockey · Fr Rad · Sa Long Run · So Rest. Lauf-km nur Mo/Mi/Sa.`;
 
 function systemPrompt() {
     return `${BASE_PROFILE}
 
-WERKZEUGE: Du hast Zugriff auf Tools für ToDos (lesen/anlegen/aktualisieren/abhaken/löschen), die heutige Trainings-Session, Recovery-Status und den Kalender. Nutze sie aktiv statt zu raten.
+STRAVA: Du hast DIREKTEN Zugriff auf Oles Strava-Daten via get_recent_activities und get_activity_detail. FRAGE NIEMALS nach Lauf-Daten (km, Pace, Puls) — rufe sie IMMER selbst ab. Wenn Ole ein Training erwähnt, hole dir sofort die Daten und analysiere sie.
+WERKZEUGE: Du hast Zugriff auf Tools für ToDos, Trainings-Session, Recovery-Status, Kalender und Strava-Aktivitäten. Nutze sie aktiv statt zu raten.
 KALENDER: Liste/Erstelle/Aktualisiere/Lösche Kalendertermine. Externe Subscriptions (iCloud/Google/Outlook) sind read-only — erkennbar an source !== 'internal'. Bei "Termin morgen 14 Uhr" Default-Dauer 60min. Bestätige knapp.
-MORGEN-RITUAL: Bei "Guten Morgen" oder ähnlichen Eröffnungen → erst Recovery + Training + offene ToDos abrufen, dann kompaktes Briefing, dann offene Frage "Was steht an?".
+MORGEN-RITUAL: Bei "Guten Morgen" oder ähnlichen Eröffnungen → erst Recovery + Training + letzte Strava-Aktivitäten + offene ToDos abrufen, dann kompaktes Briefing mit Trainings-Feedback, dann offene Frage "Was steht an?".
+TRAINING-FEEDBACK: Wenn Ole von einem Lauf/Training erzählt → IMMER zuerst get_recent_activities aufrufen, dann die passende Aktivität mit get_activity_detail analysieren. Gib konkretes Feedback zu Pace, HR-Zonen, Splits.
 TODO-REGELN: Beim Anlegen sinnvolle Defaults (priority 2, category 'life'). dueDate nur setzen, wenn der User ein Datum/Tag nennt. Beim Abhaken erst list_todos um die korrekte ID zu finden.
 STIL: Knapp, direkt, deutsch. Bestätige Aktionen in einem halben Satz. Schlage Tages-Reihenfolge mit Zeit-Blöcken vor, wenn der User unklar ist, was zu tun ist.
 HEUTE: ${todayISO()}.`;
@@ -124,11 +126,34 @@ async function streamAnthropic({ apiKey, messages, onEvent }) {
     return { content: blocks, stop_reason: stopReason };
 }
 
+// Letzte Aktivitäten aus dem Cache als Kontext-Snippet (kein API-Call).
+function recentActivitySnippet(maxItems = 3) {
+    try {
+        const cache = stravaStore.loadCache();
+        if (!cache?.activities?.length) return null;
+        const items = cache.activities.slice(0, maxItems).map((a) => {
+            const km = (a.distance / 1000).toFixed(1);
+            const min = (a.moving_time / 60).toFixed(0);
+            const pace = a.distance > 0 ? ((a.moving_time / 60) / (a.distance / 1000)).toFixed(2) : '—';
+            const hr = a.average_heartrate ? `Ø${Math.round(a.average_heartrate)}bpm` : 'kein HR';
+            const date = (a.start_date_local || '').slice(0, 10);
+            return `• ${date} ${a.type}: ${a.name} — ${km}km, ${min}min, ${pace}min/km, ${hr}`;
+        });
+        return `[STRAVA-KONTEXT — letzte Aktivitäten]\n${items.join('\n')}\n(Für Details nutze get_activity_detail mit der ID.)`;
+    } catch { return null; }
+}
+
 async function chat({ apiKey, history, userMessage, ctx }) {
     if (!apiKey) throw new Error('missing_api_key');
     if (!userMessage || !String(userMessage).trim()) throw new Error('empty_message');
 
-    const messages = [...(history || []), { role: 'user', content: String(userMessage) }];
+    // Strava-Kontext automatisch an erste User-Nachricht anhängen
+    const stravaCtx = recentActivitySnippet();
+    const enrichedMessage = stravaCtx
+        ? `${String(userMessage)}\n\n${stravaCtx}`
+        : String(userMessage);
+
+    const messages = [...(history || []), { role: 'user', content: enrichedMessage }];
 
     for (let i = 0; i < MAX_LOOP; i++) {
         // Reset des Stream-Buffers im Renderer vor jeder Loop-Iteration
