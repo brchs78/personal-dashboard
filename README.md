@@ -7,7 +7,13 @@ Persönliches KI-Dashboard für Ole — gebaut auf Electron 28, React 18 und Vit
 ## Features
 
 ### Coach
-KI-Assistent (Claude Sonnet) mit Tool-Use: liest und schreibt ToDos, Kalendertermine und Trainingspläne. Versteht Kontext (Recovery-Status, aktuelle Trainingswoche) und antwortet auf Deutsch.
+KI-Assistent (Claude Sonnet 4.5 / Opus 4.6) mit Tool-Use + SSE-Streaming: liest und schreibt ToDos, Kalendertermine, Habits, Trainingspläne und nutzt Strava-Aktivitäten als Kontext. Versteht Recovery-Status, aktuelle Trainingswoche und automatischen Aktivitäts-Kontext. Markdown-Rendering, Claude-Style-Startup-UI. Antwortet auf Deutsch.
+
+### Voice-Mode
+ElevenLabs TTS — der Coach spricht Antworten laut vor. API-Key und Voice-ID in den Einstellungen.
+
+### Habit Tracker (Atomic Habits)
+1%-Methode mit täglichen Check-ins, 21-Tage-Dot-Grid, Streak-Tracking und Identitäts-Framing ("Ich bin jemand, der …"). Habits sind anlegbar, bearbeitbar und mit Zwei-Minuten-Version + Kategorie (Mindset / Health / Productivity / Fitness).
 
 ### Kalender (Two-Way-Sync)
 - **iCloud CalDAV** — echte Apple-Kalender lesen + Coach/User-Events zurückschreiben (ETag-Konfliktschutz, App-Passwort verschlüsselt im macOS-Schlüsselbund)
@@ -22,7 +28,7 @@ Wochenplan mit täglichen Sessions (Easy Run, Zone-2, Gym, Hockey, Rad …). Pla
 Apple Health Import via SAX-Parser (Export.xml). Zeigt RHR, HRV, Schlaf, HR-Recovery — fließt automatisch in den Coach-Kontext.
 
 ### Strava
-OAuth-Anbindung: Aktivitäten-Liste und Detail-Ansicht direkt in der App.
+OAuth-Anbindung: Aktivitäten-Liste und Detail-Ansicht direkt in der App. Tokens verschlüsselt im macOS-Schlüsselbund. Coach kann Aktivitäten als Tool-Input lesen.
 
 ### ToDos
 Buckets: Heute, Diese Woche, Überfällig, Inbox. Priorität, Kategorie (uni/sport/life/errands), Fälligkeitsdatum. Vollständig per Coach bedienbar.
@@ -38,8 +44,10 @@ Buckets: Heute, Diese Woche, Überfällig, Inbox. Priorität, Kategorie (uni/spo
 | UI | React 18, Framer Motion, Lucide |
 | CalDAV | tsdav (Basic Auth, iCloud) |
 | iCal | node-ical (HTTP-Fetch + RRULE) |
-| KI | Anthropic Claude (Sonnet) — API-Key lokal in localStorage |
-| Sicherheit | `safeStorage` (macOS Keychain) für CalDAV-Passwort |
+| KI | Anthropic Claude (Sonnet 4.5 / Opus 4.6) — API-Key lokal in localStorage |
+| Voice | ElevenLabs TTS — API-Key lokal in localStorage |
+| Strava | OAuth2 (Tokens via `safeStorage`) |
+| Sicherheit | `safeStorage` (macOS Keychain) für CalDAV-Passwort und Strava-Tokens |
 
 ---
 
@@ -82,8 +90,13 @@ src/
 │   ├── calendar-store.js   # Persistenz: Account, Cache, internal Events
 │   ├── calendar-sync.js    # 15-min-Polling (subscriptions + CalDAV)
 │   ├── calendar-ipc.js     # IPC-Bridge + Write-Routing
-│   ├── coach-chat.js       # Anthropic Tool-Use Loop
-│   ├── coach-chat-tools.js # Tool-Definitionen + Dispatcher
+│   ├── coach-chat.js       # Anthropic Tool-Use Loop + SSE-Streaming
+│   ├── coach-chat-tools.js # Tool-Definitionen + Dispatcher (inkl. Strava)
+│   ├── strava-auth.js      # OAuth2 PKCE
+│   ├── strava-client.js    # Strava REST + Token-Refresh
+│   ├── strava-store.js     # Token-Persistenz (safeStorage)
+│   ├── habit-store.js      # Habit + Check-in + Streak-Persistenz
+│   ├── habit-ipc.js        # Habit IPC-Bridge
 │   ├── health-parser.js    # SAX-Parser für Apple Health Export.xml
 │   └── todo-store.js       # ToDo-Persistenz
 ├── preload/
@@ -106,4 +119,4 @@ src/
 
 ## Datenschutz
 
-Alle Daten bleiben lokal. Keine Telemetrie. Zum Anthropic-API werden nur Chat-Nachrichten und Tool-Ergebnisse gesendet (kein Passwort, keine Rohdaten). Das CalDAV-App-Passwort wird ausschließlich im macOS-Schlüsselbund gespeichert und verlässt nie das Gerät im Klartext.
+Alle Daten bleiben lokal. Keine Telemetrie. Zum Anthropic-API werden nur Chat-Nachrichten und Tool-Ergebnisse gesendet (kein Passwort, keine Rohdaten). Zur ElevenLabs-API werden nur Antwort-Texte für TTS gesendet. CalDAV-App-Passwort und Strava-OAuth-Tokens werden ausschließlich im macOS-Schlüsselbund (`safeStorage`) gespeichert und verlassen nie das Gerät im Klartext.
