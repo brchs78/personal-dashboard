@@ -1,6 +1,7 @@
 // OLE OS — Health IPC Bridge
 // Initialisiert beim App-Start: lädt Cache oder triggert Reparse.
 // IPC-Handler für Renderer-Zugriff auf Summary + Trends.
+// Auto-Reparse: alle 30 min prüfen ob Export.xml neuer als Cache.
 
 const { ipcMain, app } = require('electron');
 const { parseHealthExport } = require('./health-parser.js');
@@ -106,10 +107,28 @@ function init(getWindow) {
         return { status: state.status };
     });
 
+    // Gibt Status über Export.xml zurück (für Settings-Anzeige)
+    ipcMain.handle('health:source-status', () => ({
+        sourceExists: store.sourceExists(),
+        sourcePath: store.SOURCE_PATH,
+        lastExportMtime: store.sourceMtime() ? new Date(store.sourceMtime()).toISOString() : null,
+        status: state.status,
+        exportDate: state.aggregates?.meta?.exportDate ?? null,
+    }));
+
     // App-Start: load-or-parse async, blockiert nicht
     loadOrParse(getWindow()).catch((e) => {
         console.error('[health] init failed:', e);
     });
+
+    // Auto-Reparse alle 30 min: wenn Export.xml neuer als Cache → automatisch neu parsen
+    setInterval(() => {
+        const userDataDir = app.getPath('userData');
+        if (store.sourceExists() && store.needsReparse(userDataDir) && state.status !== 'parsing') {
+            console.log('[health] Export.xml updated, triggering auto-reparse');
+            loadOrParse(getWindow()).catch(e => console.error('[health] auto-reparse failed:', e));
+        }
+    }, 30 * 60 * 1000);
 }
 
 function getCurrentSummary() {

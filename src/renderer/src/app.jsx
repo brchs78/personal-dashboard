@@ -140,6 +140,12 @@ export default function App() {
     const [fcIdx, setFcIdx] = useState(0); const [fcFlipped, setFcFlipped] = useState(false);
     const [studyPlans, setStudyPlans] = useState({}); const [spBusy, setSpBusy] = useState(null);
     const [calDate, setCalDate] = useState(new Date());
+    const [healthSrc, setHealthSrc] = useState(null);
+
+    useEffect(() => {
+        if (!showSettings) return;
+        window.oleAPI?.health?.sourceStatus?.().then(s => setHealthSrc(s)).catch(() => {});
+    }, [showSettings]);
 
     useEffect(() => {
         loadAll();
@@ -328,7 +334,14 @@ export default function App() {
                         <input type="number" value={maxHR} onChange={e => setMaxHR(parseInt(e.target.value) || 197)} onBlur={() => save("ole:max-hr", maxHR)} style={{ ...INP, marginBottom: 12 }} />
                         <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>Erscheinungsbild</p>
                         <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>Zwischen hellem und dunklem Modus wechseln.</p>
-                        <button onClick={toggle} style={{ width: "100%", padding: "10px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontSize: 13, fontWeight: 600, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-primary)", marginBottom: 12 }}>{mode === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode"}</button>
+                        <button onClick={toggle} style={{ width: "100%", padding: "10px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontSize: 13, fontWeight: 600, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-primary)", marginBottom: 16 }}>{mode === "dark" ? "☀️ Light Mode" : "🌙 Dark Mode"}</button>
+                        <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>Apple Health</p>
+                        <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>App erkennt automatisch wenn eine neue Export.xml vorhanden ist (alle 30 Min). Richte einen Shortcut ein der täglich exportiert.</p>
+                        <div style={{ fontSize: 12, padding: "8px 10px", borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)", color: "var(--color-text-secondary)", marginBottom: 12, lineHeight: 1.5 }}>
+                            {healthSrc == null ? "Lade…" : healthSrc.sourceExists
+                                ? <><span style={{ color: tokens.colors.status?.success ?? "#22c55e" }}>✓</span>{" "}Export gefunden · {healthSrc.exportDate ? `Exportiert ${new Date(healthSrc.exportDate).toLocaleDateString("de-DE")}` : "Datum unbekannt"}</>
+                                : <><span style={{ color: tokens.colors.status?.warning ?? "#f59e0b" }}>⚠</span>{" "}Kein Export gefunden — lege <code style={{ fontSize: 11 }}>~/apple_health_export/Export.xml</code> an</>}
+                        </div>
                         <div style={{ display: "flex", gap: 8 }}>
                             <button onClick={saveKey} style={{ flex: 1, padding: "10px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontWeight: 700, fontSize: 13, border: "none", background: tokens.colors.accent.DEFAULT, color: "#ffffff" }}>Speichern</button>
                             <button onClick={() => setShowSettings(false)} style={{ padding: "10px 16px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontSize: 13, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-secondary)" }}>Abbrechen</button>

@@ -11,11 +11,12 @@ contextBridge.exposeInMainWorld('oleAPI', {
     hideWindow: () => ipcRenderer.send('hide-window'),
     onRoutine: (cb) => on('routine-trigger', (id) => cb(id)),
     health: {
-        getSummary: () => ipcRenderer.invoke('health:get-summary'),
-        getTrends:  (metric, days) => ipcRenderer.invoke('health:get-trends', metric, days),
-        refresh:    () => ipcRenderer.invoke('health:refresh'),
-        onReady:    (cb) => on('health:ready', cb),
-        onProgress: (cb) => on('health:progress', cb),
+        getSummary:   () => ipcRenderer.invoke('health:get-summary'),
+        getTrends:    (metric, days) => ipcRenderer.invoke('health:get-trends', metric, days),
+        refresh:      () => ipcRenderer.invoke('health:refresh'),
+        sourceStatus: () => ipcRenderer.invoke('health:source-status'),
+        onReady:      (cb) => on('health:ready', cb),
+        onProgress:   (cb) => on('health:progress', cb),
     },
     strava: {
         status:         () => ipcRenderer.invoke('strava:status'),
