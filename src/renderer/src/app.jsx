@@ -109,6 +109,8 @@ export default function App() {
     const [showSettings, setShowSettings] = useState(false);
     const [apiKey, setApiKey] = useState(getKey());
     const [keySet, setKeySet] = useState(!!getKey());
+    const [elKey, setElKey] = useState(() => localStorage.getItem("ole:elevenlabs-key") || "");
+    const [elVoice, setElVoice] = useState(() => localStorage.getItem("ole:elevenlabs-voice-id") || "");
 
     const [plan, setPlan] = useState(null);
     const [planBusy, setPlanBusy] = useState(true);
@@ -175,6 +177,8 @@ export default function App() {
 
     function saveKey() {
         localStorage.setItem("ole:api-key", apiKey.trim());
+        localStorage.setItem("ole:elevenlabs-key", elKey.trim());
+        localStorage.setItem("ole:elevenlabs-voice-id", elVoice.trim());
         setKeySet(!!apiKey.trim());
         setShowSettings(false);
         if (apiKey.trim()) { genPlan(); }
@@ -330,6 +334,12 @@ export default function App() {
                         <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}>Anthropic API Key</p>
                         <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "0 0 12px", lineHeight: 1.5 }}>Damit die KI-Features funktionieren. Bekommst du auf console.anthropic.com</p>
                         <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-ant-..." style={{ ...INP, marginBottom: 12, fontFamily: "var(--font-mono)", fontSize: 12 }} />
+                        <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>ElevenLabs API Key <span style={{ fontWeight: 400, color: "var(--color-text-tertiary)" }}>optional · Voice-Modus</span></p>
+                        <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>Für eine hochwertige Coach-Stimme. Key auf elevenlabs.io/app/settings/api-keys</p>
+                        <input type="password" value={elKey} onChange={e => setElKey(e.target.value)} placeholder="sk_..." style={{ ...INP, marginBottom: 12, fontFamily: "var(--font-mono)", fontSize: 12 }} />
+                        <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>ElevenLabs Voice ID</p>
+                        <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>Stimme aus elevenlabs.io/voice-library wählen, ID aus der URL kopieren.</p>
+                        <input type="text" value={elVoice} onChange={e => setElVoice(e.target.value)} placeholder="EXAVITQu4vr4xnSDxMaL" style={{ ...INP, marginBottom: 12, fontFamily: "var(--font-mono)", fontSize: 12 }} />
                         <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>Max-Herzfrequenz <span style={{ fontWeight: 400, color: "var(--color-text-tertiary)" }}>bpm</span></p>
                         <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>Für die Puls-Zonen-Berechnung. Faustregel: 220 − Alter.</p>
                         <input type="number" value={maxHR} onChange={e => setMaxHR(parseInt(e.target.value) || 197)} onBlur={() => save("ole:max-hr", maxHR)} style={{ ...INP, marginBottom: 12 }} />

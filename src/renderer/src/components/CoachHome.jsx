@@ -30,9 +30,11 @@ function toolPillLabel(ev) {
         case "update_todo":         return "update_todo";
         case "complete_todo":       return "complete_todo";
         case "remove_todo":         return "remove_todo";
-        case "get_training_today":  return "training_today";
-        case "get_recovery_status": return "recovery";
-        default:                    return ev?.tool || "tool";
+        case "get_training_today":    return "training_today";
+        case "get_recovery_status":   return "recovery";
+        case "get_recent_activities": return input.type ? `strava · ${input.type.toLowerCase()}` : "strava · activities";
+        case "get_activity_detail":   return `strava · activity ${input.id ?? ""}`;
+        default:                      return ev?.tool || "tool";
     }
 }
 

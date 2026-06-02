@@ -12,6 +12,35 @@ import { X, Mic, MicOff } from "lucide-react";
 
 const SILENCE_MS = 1500;
 
+function getElConfig() {
+    return {
+        key: localStorage.getItem("ole:elevenlabs-key") || "",
+        voiceId: localStorage.getItem("ole:elevenlabs-voice-id") || "",
+    };
+}
+
+async function ttsElevenLabs(text, key, voiceId) {
+    const clean = text.replace(/[#*`_~>]/g, "").trim();
+    if (!clean) return null;
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+        method: "POST",
+        headers: {
+            "xi-api-key": key,
+            "Content-Type": "application/json",
+            "Accept": "audio/mpeg",
+        },
+        body: JSON.stringify({
+            text: clean,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: { stability: 0.45, similarity_boost: 0.8, style: 0.3, use_speaker_boost: true },
+        }),
+    });
+    if (!res.ok) throw new Error(`ElevenLabs ${res.status}`);
+    const buf = await res.arrayBuffer();
+    const blob = new Blob([buf], { type: "audio/mpeg" });
+    return URL.createObjectURL(blob);
+}
+
 const STATE_LABEL = {
     idle:      "...",
     listening: "Höre zu...",
@@ -93,6 +122,7 @@ export default function VoiceMode({ coach, apiKey, onClose }) {
             if (silenceTRef.current) clearTimeout(silenceTRef.current);
             try { r.stop(); } catch { /* noop */ }
             try { window.speechSynthesis.cancel(); } catch { /* noop */ }
+            if (utterRef.current?.pause) { try { utterRef.current.pause(); } catch { /* noop */ } }
             recogRef.current = null;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,40 +139,50 @@ export default function VoiceMode({ coach, apiKey, onClose }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [coach.display.length]);
 
-    function speak(text) {
-        const synth = window.speechSynthesis;
-        if (!synth) {
-            setVState("listening");
-            return;
-        }
-        // STT muss stoppen während TTS — sonst Echo-Loop
+    function afterSpeak() {
+        utterRef.current = null;
+        finalAccRef.current = "";
+        setLive("");
+        setVState("listening");
+        try { recogRef.current?.start(); } catch { /* noop */ }
+    }
+
+    async function speak(text) {
         setVState("speaking");
         try { recogRef.current?.stop(); } catch { /* noop */ }
-        try { synth.cancel(); } catch { /* noop */ }
 
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = "de-DE";
-        u.rate = 1.0;
-        u.pitch = 1.0;
-        // Voice-Auswahl: erste de-* falls verfügbar
-        const voices = synth.getVoices();
-        const de = voices.find((v) => /^de(-|_|$)/i.test(v.lang));
-        if (de) u.voice = de;
-        u.onend = () => {
-            utterRef.current = null;
-            // Zurück zu listening
-            finalAccRef.current = "";
-            setLive("");
-            setVState("listening");
-            try { recogRef.current?.start(); } catch { /* noop */ }
-        };
-        u.onerror = () => {
-            utterRef.current = null;
-            setVState("listening");
-            try { recogRef.current?.start(); } catch { /* noop */ }
-        };
-        utterRef.current = u;
-        try { synth.speak(u); } catch { /* noop */ }
+        const { key, voiceId } = getElConfig();
+
+        if (key && voiceId) {
+            // ElevenLabs TTS
+            try {
+                const url = await ttsElevenLabs(text, key, voiceId);
+                if (!url) { afterSpeak(); return; }
+                const audio = new Audio(url);
+                utterRef.current = audio;
+                audio.onended = () => { URL.revokeObjectURL(url); afterSpeak(); };
+                audio.onerror = () => { URL.revokeObjectURL(url); afterSpeak(); };
+                await audio.play();
+            } catch {
+                afterSpeak();
+            }
+        } else {
+            // Fallback: Browser speechSynthesis
+            const synth = window.speechSynthesis;
+            if (!synth) { afterSpeak(); return; }
+            try { synth.cancel(); } catch { /* noop */ }
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = "de-DE";
+            u.rate = 1.0;
+            u.pitch = 1.0;
+            const voices = synth.getVoices();
+            const de = voices.find((v) => /^de(-|_|$)/i.test(v.lang));
+            if (de) u.voice = de;
+            u.onend = afterSpeak;
+            u.onerror = afterSpeak;
+            utterRef.current = u;
+            try { synth.speak(u); } catch { afterSpeak(); }
+        }
     }
 
     async function submit(txt) {
@@ -178,6 +218,7 @@ export default function VoiceMode({ coach, apiKey, onClose }) {
     function close() {
         try { recogRef.current?.stop(); } catch { /* noop */ }
         try { window.speechSynthesis.cancel(); } catch { /* noop */ }
+        if (utterRef.current?.pause) { try { utterRef.current.pause(); } catch { /* noop */ } }
         if (silenceTRef.current) clearTimeout(silenceTRef.current);
         onClose();
     }
