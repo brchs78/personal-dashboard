@@ -1,6 +1,6 @@
 // OLE OS — Habit Tracker Hub (Atomic Habits / 1%-Methode)
 import { useState, useCallback } from "react";
-import { Plus, Flame, Trash2, Check } from "lucide-react";
+import { Plus, Flame, Trash2, Check, Pencil } from "lucide-react";
 import { useTheme } from "../hooks/useTheme.jsx";
 import { useHabits } from "../hooks/useHabits.js";
 
@@ -61,7 +61,7 @@ function DotGrid({ habitId, checkins, tokens }) {
 }
 
 // ─── HabitCard ──────────────────────────────────────────────────────────────
-function HabitCard({ habit, checkins, streak, onToggle, onRemove, tokens }) {
+function HabitCard({ habit, checkins, streak, onToggle, onRemove, onEdit, tokens }) {
     const [hovered, setHovered] = useState(false);
     const today = todayISO();
     const done = Array.isArray(checkins[today]) && checkins[today].includes(habit.id);
@@ -169,40 +169,62 @@ function HabitCard({ habit, checkins, streak, onToggle, onRemove, tokens }) {
                 </div>
             )}
 
-            {/* Trash on hover */}
+            {/* Edit + Trash on hover */}
             {hovered && (
-                <button
-                    onClick={() => onRemove(habit.id)}
-                    title="Habit entfernen"
-                    style={{
-                        position: "absolute",
-                        top: 10,
-                        right: 10,
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        padding: 4,
-                        borderRadius: tokens.radius.sm,
-                        color: tokens.colors.text.tertiary,
-                        display: "flex",
-                        alignItems: "center",
-                    }}
-                >
-                    <Trash2 size={13} />
-                </button>
+                <div style={{
+                    position: "absolute",
+                    top: 10,
+                    right: 10,
+                    display: "flex",
+                    gap: 2,
+                }}>
+                    <button
+                        onClick={() => onEdit(habit)}
+                        title="Habit bearbeiten"
+                        style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: 4,
+                            borderRadius: tokens.radius.sm,
+                            color: tokens.colors.text.tertiary,
+                            display: "flex",
+                            alignItems: "center",
+                        }}
+                    >
+                        <Pencil size={13} />
+                    </button>
+                    <button
+                        onClick={() => onRemove(habit.id)}
+                        title="Habit entfernen"
+                        style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: 4,
+                            borderRadius: tokens.radius.sm,
+                            color: tokens.colors.text.tertiary,
+                            display: "flex",
+                            alignItems: "center",
+                        }}
+                    >
+                        <Trash2 size={13} />
+                    </button>
+                </div>
             )}
         </div>
     );
 }
 
-// ─── AddHabitModal ───────────────────────────────────────────────────────────
-function AddHabitModal({ onClose, onSave, tokens }) {
+// ─── HabitModal (Add + Edit) ─────────────────────────────────────────────────
+function HabitModal({ onClose, onSave, tokens, initial }) {
+    const isEdit = Boolean(initial);
     const [form, setForm] = useState({
-        name: "",
-        emoji: "✅",
-        identity: "",
-        twoMinuteVersion: "",
-        category: "mindset",
+        name: initial?.name || "",
+        emoji: initial?.emoji || "✅",
+        identity: initial?.identity || "",
+        twoMinuteVersion: initial?.twoMinuteVersion || "",
+        category: initial?.category || "mindset",
     });
 
     const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
@@ -262,7 +284,7 @@ function AddHabitModal({ onClose, onSave, tokens }) {
                     fontSize: tokens.typography.fontSize.base,
                     color: tokens.colors.text.primary,
                 }}>
-                    Neue Gewohnheit
+                    {isEdit ? "Gewohnheit bearbeiten" : "Neue Gewohnheit"}
                 </h3>
 
                 {/* Emoji + Name row */}
@@ -475,12 +497,18 @@ function Header({ todayScore, onAdd, tokens }) {
 // ─── HabitHub (main export) ──────────────────────────────────────────────────
 export default function HabitHub() {
     const { tokens } = useTheme();
-    const { habits, checkins, streaks, addHabit, removeHabit, toggleCheckin, todayScore } = useHabits();
+    const { habits, checkins, streaks, addHabit, updateHabit, removeHabit, toggleCheckin, todayScore } = useHabits();
     const [showAdd, setShowAdd] = useState(false);
+    const [editingHabit, setEditingHabit] = useState(null);
 
     const handleAdd = useCallback(async (form) => {
         await addHabit(form);
     }, [addHabit]);
+
+    const handleUpdate = useCallback(async (form) => {
+        if (!editingHabit) return;
+        await updateHabit(editingHabit.id, form);
+    }, [updateHabit, editingHabit]);
 
     return (
         <div style={{
@@ -511,6 +539,7 @@ export default function HabitHub() {
                             streak={streaks[habit.id] || 0}
                             onToggle={toggleCheckin}
                             onRemove={removeHabit}
+                            onEdit={setEditingHabit}
                             tokens={tokens}
                         />
                     ))
@@ -518,10 +547,19 @@ export default function HabitHub() {
             </div>
 
             {showAdd && (
-                <AddHabitModal
+                <HabitModal
                     tokens={tokens}
                     onClose={() => setShowAdd(false)}
                     onSave={handleAdd}
+                />
+            )}
+
+            {editingHabit && (
+                <HabitModal
+                    tokens={tokens}
+                    initial={editingHabit}
+                    onClose={() => setEditingHabit(null)}
+                    onSave={handleUpdate}
                 />
             )}
         </div>
