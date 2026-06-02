@@ -51,6 +51,7 @@ export default function useCoachChat() {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
     const [liveEvents, setLiveEvents] = useState([]); // Tool-Events während laufendem Send
+    const [streamingText, setStreamingText] = useState(""); // Live-Buffer für SSE-Deltas
 
     useEffect(() => {
         const a = api();
@@ -62,7 +63,18 @@ export default function useCoachChat() {
                 setLiveEvents((prev) => [...prev, ev]);
             }
         });
-        return () => { unsubHistory?.(); unsubTool?.(); };
+        const unsubDelta = a.onStreamDelta?.((payload) => {
+            setStreamingText((prev) => prev + (payload?.delta || ""));
+        });
+        const unsubReset = a.onStreamReset?.(() => {
+            setStreamingText("");
+        });
+        return () => {
+            unsubHistory?.();
+            unsubTool?.();
+            unsubDelta?.();
+            unsubReset?.();
+        };
     }, []);
 
     const send = useCallback(async (userMessage, apiKey) => {
@@ -76,6 +88,7 @@ export default function useCoachChat() {
         setBusy(true);
         setError(null);
         setLiveEvents([]);
+        setStreamingText("");
         try {
             const res = await a.send({ apiKey, userMessage: txt });
             if (!res?.ok) setError(res?.error || "unknown_error");
@@ -84,6 +97,7 @@ export default function useCoachChat() {
         } finally {
             setBusy(false);
             setLiveEvents([]);
+            setStreamingText("");
         }
     }, []);
 
@@ -99,6 +113,7 @@ export default function useCoachChat() {
         busy,
         error,
         liveEvents,
+        streamingText,
         send,
         clear,
     };

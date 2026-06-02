@@ -60,6 +60,8 @@ contextBridge.exposeInMainWorld('oleAPI', {
         getHistory:       () => ipcRenderer.invoke('coach:get-history'),
         onHistoryUpdated: (cb) => on('coach:history-updated', cb),
         onToolEvent:      (cb) => on('coach:tool-event', cb),
+        onStreamDelta:    (cb) => on('coach:stream-delta', cb),
+        onStreamReset:    (cb) => on('coach:stream-reset', cb),
     },
     calendar: {
         list:           () => ipcRenderer.invoke('calendar:list'),

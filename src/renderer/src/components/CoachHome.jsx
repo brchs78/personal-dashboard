@@ -1,10 +1,11 @@
-// OLE OS — CoachHome: Claude-Style Startseite
-// Empty State: zentriertes Greeting + große Textarea + Quick-Chips.
-// Chat State: Messages-Liste oben, sticky Input unten.
-// Mic-Button im Input öffnet das VoiceMode-Overlay.
+// OLE OS — CoachHome: Claude.ai-Style Startseite
+// Empty State: zentriertes Serif-Greeting + große ruhige Input-Box + dezente Suggestion-Chips.
+// Chat State: Messages-Liste oben, sticky Input unten, Markdown-Rendering, Live-Stream-Bubble.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Mic, Trash2 } from "lucide-react";
+import { Mic, Trash2, Sparkles, Activity, CalendarDays, ListTodo } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import useCoachChat from "../hooks/useCoachChat";
 import { useTheme } from "../hooks/useTheme.jsx";
 import VoiceMode from "./VoiceMode";
@@ -13,15 +14,6 @@ const getKey = () =>
     typeof localStorage !== "undefined"
         ? localStorage.getItem("ole:api-key") || ""
         : "";
-
-function gTxt(a, b) {
-    return {
-        background: `linear-gradient(135deg,${a},${b})`,
-        WebkitBackgroundClip: "text",
-        WebkitTextFillColor: "transparent",
-        backgroundClip: "text",
-    };
-}
 
 function greeting() {
     const h = new Date().getHours();
@@ -68,14 +60,133 @@ function ToolPill({ ev }) {
 }
 
 const QUICK_CHIPS = [
-    "Guten Morgen, was steht an?",
-    "Wie sieht mein heutiges Training aus?",
-    "Neues ToDo anlegen",
-    "Wie ist mein Recovery?",
+    { icon: Sparkles,     text: "Guten Morgen, was steht an?" },
+    { icon: Activity,     text: "Wie sieht mein heutiges Training aus?" },
+    { icon: ListTodo,     text: "Neues ToDo anlegen" },
+    { icon: CalendarDays, text: "Wie ist mein Recovery?" },
 ];
 
-export default function CoachHome() {
+// Markdown-Components für Assistant-Bubbles — alles inline via Tokens.
+function buildMdComponents(tokens) {
+    return {
+        p: ({ node, ...props }) => (
+            <p style={{ margin: "0 0 0.6em", lineHeight: 1.7 }} {...props} />
+        ),
+        ul: ({ node, ...props }) => (
+            <ul style={{ margin: "0 0 0.6em", paddingLeft: 20 }} {...props} />
+        ),
+        ol: ({ node, ...props }) => (
+            <ol style={{ margin: "0 0 0.6em", paddingLeft: 20 }} {...props} />
+        ),
+        li: ({ node, ...props }) => (
+            <li style={{ margin: "0.15em 0", lineHeight: 1.6 }} {...props} />
+        ),
+        strong: ({ node, ...props }) => (
+            <strong style={{ fontWeight: 600, color: tokens.colors.text.primary }} {...props} />
+        ),
+        em: ({ node, ...props }) => (
+            <em style={{ fontStyle: "italic" }} {...props} />
+        ),
+        a: ({ node, ...props }) => (
+            <a
+                style={{
+                    color: tokens.colors.accent.DEFAULT,
+                    textDecoration: "underline",
+                    textUnderlineOffset: 2,
+                }}
+                target="_blank"
+                rel="noreferrer"
+                {...props}
+            />
+        ),
+        code: ({ node, inline, className, children, ...props }) => {
+            if (inline) {
+                return (
+                    <code
+                        style={{
+                            fontFamily: tokens.typography.fontFamily.mono,
+                            fontSize: "0.88em",
+                            padding: "1px 6px",
+                            borderRadius: 6,
+                            background: tokens.colors.accent.secondarySoft,
+                            color: tokens.colors.text.primary,
+                        }}
+                        {...props}
+                    >
+                        {children}
+                    </code>
+                );
+            }
+            return (
+                <code
+                    style={{
+                        fontFamily: tokens.typography.fontFamily.mono,
+                        fontSize: "0.88em",
+                        display: "block",
+                        whiteSpace: "pre-wrap",
+                    }}
+                    {...props}
+                >
+                    {children}
+                </code>
+            );
+        },
+        pre: ({ node, ...props }) => (
+            <pre
+                style={{
+                    background: tokens.colors.bg.sunken,
+                    border: `0.5px solid ${tokens.colors.border.subtle}`,
+                    borderRadius: tokens.radius.md,
+                    padding: "10px 12px",
+                    margin: "0.4em 0 0.8em",
+                    overflowX: "auto",
+                    fontSize: 13,
+                }}
+                {...props}
+            />
+        ),
+        h1: ({ node, ...props }) => (
+            <h3 style={{ margin: "0.6em 0 0.3em", fontSize: 18, fontWeight: 600 }} {...props} />
+        ),
+        h2: ({ node, ...props }) => (
+            <h3 style={{ margin: "0.6em 0 0.3em", fontSize: 17, fontWeight: 600 }} {...props} />
+        ),
+        h3: ({ node, ...props }) => (
+            <h4 style={{ margin: "0.5em 0 0.25em", fontSize: 15, fontWeight: 600 }} {...props} />
+        ),
+        blockquote: ({ node, ...props }) => (
+            <blockquote
+                style={{
+                    margin: "0.4em 0",
+                    paddingLeft: 12,
+                    borderLeft: `2px solid ${tokens.colors.accent.border}`,
+                    color: tokens.colors.text.secondary,
+                }}
+                {...props}
+            />
+        ),
+    };
+}
+
+function AssistantMarkdown({ text }) {
     const { tokens } = useTheme();
+    return (
+        <div
+            style={{
+                color: tokens.colors.text.primary,
+                fontFamily: tokens.typography.fontFamily.serif,
+                fontSize: 16,
+                lineHeight: 1.7,
+            }}
+        >
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={buildMdComponents(tokens)}>
+                {text}
+            </ReactMarkdown>
+        </div>
+    );
+}
+
+export default function CoachHome() {
     const coach = useCoachChat();
     const [chatTxt, setChatTxt] = useState("");
     const [voiceOpen, setVoiceOpen] = useState(false);
@@ -90,14 +201,14 @@ export default function CoachHome() {
 
     useLayoutEffect(() => {
         endRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [coach.display.length, coach.busy, coach.liveEvents.length]);
+    }, [coach.display.length, coach.busy, coach.liveEvents.length, coach.streamingText.length]);
 
     // Auto-grow textarea
     useEffect(() => {
         const ta = taRef.current;
         if (!ta) return;
         ta.style.height = "auto";
-        ta.style.height = Math.min(160, ta.scrollHeight) + "px";
+        ta.style.height = Math.min(180, Math.max(24, ta.scrollHeight)) + "px";
     }, [chatTxt]);
 
     async function send() {
@@ -154,7 +265,7 @@ export default function CoachHome() {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Empty State — zentriertes Greeting + Textarea + Quick-Chips
+// Empty State — Claude.ai-Style: Serif-Greeting + Input + Chips
 // ──────────────────────────────────────────────────────────────────
 function EmptyState({ chatTxt, setChatTxt, taRef, onKeyDown, send, apiKey, sttAvailable, onOpenVoice }) {
     const { tokens } = useTheme();
@@ -165,7 +276,7 @@ function EmptyState({ chatTxt, setChatTxt, taRef, onKeyDown, send, apiKey, sttAv
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                paddingTop: "12vh",
+                paddingTop: "18vh",
                 paddingLeft: 16,
                 paddingRight: 16,
             }}
@@ -173,26 +284,18 @@ function EmptyState({ chatTxt, setChatTxt, taRef, onKeyDown, send, apiKey, sttAv
             <div style={{ width: "100%", maxWidth: 720 }}>
                 <h1
                     style={{
-                        fontSize: 32,
-                        fontWeight: 700,
-                        letterSpacing: "-0.5px",
-                        margin: "0 0 6px",
+                        fontFamily: tokens.typography.fontFamily.serif,
+                        fontSize: 48,
+                        fontWeight: 400,
+                        letterSpacing: "-0.02em",
+                        margin: "0 0 32px",
                         textAlign: "center",
-                        ...gTxt(tokens.colors.accent.DEFAULT, tokens.colors.accent.secondary),
+                        color: tokens.colors.accent.DEFAULT,
+                        lineHeight: 1.1,
                     }}
                 >
                     {greeting()}
                 </h1>
-                <p
-                    style={{
-                        fontSize: 14,
-                        color: "var(--color-text-secondary)",
-                        textAlign: "center",
-                        margin: "0 0 28px",
-                    }}
-                >
-                    Was steht heute an?
-                </p>
 
                 <ChatInput
                     chatTxt={chatTxt}
@@ -208,36 +311,47 @@ function EmptyState({ chatTxt, setChatTxt, taRef, onKeyDown, send, apiKey, sttAv
 
                 <div
                     style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(2, 1fr)",
-                        gap: 8,
-                        marginTop: 18,
+                        display: "flex",
+                        flexDirection: "column",
+                        marginTop: 24,
                     }}
                 >
-                    {QUICK_CHIPS.map((q) => (
+                    {QUICK_CHIPS.map(({ icon: Icon, text }) => (
                         <button
-                            key={q}
-                            onClick={() => setChatTxt(q)}
+                            key={text}
+                            onClick={() => setChatTxt(text)}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = tokens.colors.bg.sunken;
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "transparent";
+                            }}
                             style={{
-                                fontSize: 12,
-                                padding: "9px 12px",
-                                borderRadius: "var(--border-radius-md)",
-                                background: "var(--color-background-secondary)",
-                                border: "0.5px solid var(--color-border-tertiary)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 12,
+                                fontSize: 14,
+                                padding: "12px 14px",
+                                borderRadius: tokens.radius.md,
+                                background: "transparent",
+                                border: "none",
+                                borderBottom: `0.5px solid ${tokens.colors.border.subtle}`,
                                 cursor: "pointer",
-                                color: "var(--color-text-secondary)",
+                                color: tokens.colors.text.secondary,
                                 textAlign: "left",
                                 lineHeight: 1.4,
-                                fontFamily: "var(--font-sans)",
+                                fontFamily: tokens.typography.fontFamily.sans,
+                                transition: `background ${tokens.motion.duration.fast}s ease`,
                             }}
                         >
-                            {q}
+                            <Icon size={15} strokeWidth={1.8} style={{ color: tokens.colors.accent.DEFAULT, flexShrink: 0 }} />
+                            <span>{text}</span>
                         </button>
                     ))}
                 </div>
 
                 {!apiKey && (
-                    <p style={{ marginTop: 16, fontSize: 11, color: "var(--color-text-tertiary)", textAlign: "center" }}>
+                    <p style={{ marginTop: 18, fontSize: 11, color: tokens.colors.text.tertiary, textAlign: "center" }}>
                         Erst Anthropic API Key in den Settings hinterlegen.
                     </p>
                 )}
@@ -247,34 +361,39 @@ function EmptyState({ chatTxt, setChatTxt, taRef, onKeyDown, send, apiKey, sttAv
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Chat State — Messages-Liste + sticky Input
+// Chat State — Messages-Liste mit Markdown + Live-Stream-Bubble
 // ──────────────────────────────────────────────────────────────────
 function ChatState({ coach, endRef, chatTxt, setChatTxt, taRef, onKeyDown, send, apiKey, sttAvailable, onOpenVoice }) {
     const { tokens } = useTheme();
+    const showStreaming = coach.busy && coach.streamingText;
+    const showThinking = coach.busy && !coach.streamingText;
     return (
         <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, maxWidth: 720, width: "100%", margin: "0 auto" }}>
             <div
                 style={{
-                    padding: "12px 4px 10px",
+                    padding: "12px 4px 8px",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
+                    justifyContent: "flex-end",
                     flexShrink: 0,
                 }}
             >
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, ...gTxt(tokens.colors.accent.DEFAULT, tokens.colors.accent.secondary) }}>KI-Coach</p>
                 <button
                     onClick={coach.clear}
                     title="Chat zurücksetzen"
+                    onMouseEnter={(e) => { e.currentTarget.style.opacity = 1; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = 0.5; }}
                     style={{
                         padding: 6,
-                        borderRadius: "var(--border-radius-md)",
-                        border: "0.5px solid var(--color-border-tertiary)",
+                        borderRadius: tokens.radius.md,
+                        border: "none",
                         background: "transparent",
-                        color: "var(--color-text-tertiary)",
+                        color: tokens.colors.text.tertiary,
                         cursor: "pointer",
                         display: "inline-flex",
                         alignItems: "center",
+                        opacity: 0.5,
+                        transition: "opacity 0.15s ease",
                     }}
                 >
                     <Trash2 size={14} />
@@ -289,48 +408,29 @@ function ChatState({ coach, endRef, chatTxt, setChatTxt, taRef, onKeyDown, send,
                     padding: "8px 4px 16px",
                     display: "flex",
                     flexDirection: "column",
-                    gap: 10,
+                    gap: 14,
                 }}
             >
                 {coach.display.map((m) => (
-                    <div
-                        key={m.id}
-                        style={{
-                            alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                            maxWidth: "86%",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 4,
-                        }}
-                    >
-                        {m.role === "assistant" && m.toolEvents.length > 0 && (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                                {m.toolEvents.map((ev, idx) => <ToolPill key={idx} ev={ev} />)}
-                            </div>
-                        )}
-                        {m.text && (
-                            <div
-                                style={{
-                                    background: m.role === "user"
-                                        ? tokens.colors.accent.soft
-                                        : "var(--color-background-secondary)",
-                                    color: m.role === "user" ? tokens.colors.accent.DEFAULT : "var(--color-text-primary)",
-                                    padding: "9px 13px",
-                                    borderRadius: "var(--border-radius-lg)",
-                                    fontSize: m.role === "assistant" ? 15 : 13,
-                                    fontFamily: m.role === "assistant" ? "var(--font-serif)" : "var(--font-sans)",
-                                    lineHeight: m.role === "assistant" ? 1.7 : 1.6,
-                                    whiteSpace: "pre-wrap",
-                                    border: m.role === "user" ? `0.5px solid ${tokens.colors.accent.border}` : "none",
-                                }}
-                            >
-                                {m.text}
-                            </div>
-                        )}
-                    </div>
+                    <MessageRow key={m.id} m={m} />
                 ))}
-                {coach.busy && (
-                    <div style={{ alignSelf: "flex-start", display: "flex", flexDirection: "column", gap: 4 }}>
+
+                {showStreaming && (
+                    <div style={{ alignSelf: "flex-start", maxWidth: "92%", display: "flex", flexDirection: "column", gap: 6 }}>
+                        {coach.liveEvents.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                {coach.liveEvents.map((ev, idx) => <ToolPill key={idx} ev={ev} />)}
+                            </div>
+                        )}
+                        <div style={{ padding: "4px 0" }}>
+                            <AssistantMarkdown text={coach.streamingText} />
+                            <BlinkingCaret tokens={tokens} />
+                        </div>
+                    </div>
+                )}
+
+                {showThinking && (
+                    <div style={{ alignSelf: "flex-start", display: "flex", flexDirection: "column", gap: 6 }}>
                         {coach.liveEvents.length > 0 && (
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                                 {coach.liveEvents.map((ev, idx) => <ToolPill key={idx} ev={ev} />)}
@@ -338,17 +438,19 @@ function ChatState({ coach, endRef, chatTxt, setChatTxt, taRef, onKeyDown, send,
                         )}
                         <div
                             style={{
-                                background: "var(--color-background-secondary)",
-                                padding: "9px 13px",
-                                borderRadius: "var(--border-radius-lg)",
-                                fontSize: 13,
-                                color: "var(--color-text-secondary)",
+                                fontSize: 14,
+                                fontFamily: tokens.typography.fontFamily.serif,
+                                color: tokens.colors.text.secondary,
+                                fontStyle: "italic",
+                                padding: "4px 0",
                             }}
                         >
-                            Coach denkt...
+                            Coach denkt
+                            <ThinkingDots />
                         </div>
                     </div>
                 )}
+
                 {coach.error && (
                     <div
                         style={{
@@ -357,7 +459,7 @@ function ChatState({ coach, endRef, chatTxt, setChatTxt, taRef, onKeyDown, send,
                             border: "0.5px solid rgba(239,68,68,0.25)",
                             color: "#ef4444",
                             padding: "9px 13px",
-                            borderRadius: "var(--border-radius-lg)",
+                            borderRadius: tokens.radius.lg,
                             fontSize: 12,
                         }}
                     >
@@ -384,8 +486,77 @@ function ChatState({ coach, endRef, chatTxt, setChatTxt, taRef, onKeyDown, send,
     );
 }
 
+function MessageRow({ m }) {
+    const { tokens } = useTheme();
+    if (m.role === "user") {
+        return (
+            <div
+                style={{
+                    alignSelf: "flex-end",
+                    maxWidth: "86%",
+                    background: tokens.colors.accent.soft,
+                    color: tokens.colors.accent.DEFAULT,
+                    padding: "10px 14px",
+                    borderRadius: tokens.radius.lg,
+                    fontSize: 14,
+                    fontFamily: tokens.typography.fontFamily.sans,
+                    lineHeight: 1.5,
+                    whiteSpace: "pre-wrap",
+                    border: `0.5px solid ${tokens.colors.accent.border}`,
+                }}
+            >
+                {m.text}
+            </div>
+        );
+    }
+    return (
+        <div style={{ alignSelf: "flex-start", maxWidth: "92%", display: "flex", flexDirection: "column", gap: 6 }}>
+            {m.toolEvents.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {m.toolEvents.map((ev, idx) => <ToolPill key={idx} ev={ev} />)}
+                </div>
+            )}
+            {m.text && (
+                <div style={{ padding: "4px 0" }}>
+                    <AssistantMarkdown text={m.text} />
+                </div>
+            )}
+        </div>
+    );
+}
+
+function BlinkingCaret({ tokens }) {
+    return (
+        <span
+            style={{
+                display: "inline-block",
+                width: 8,
+                height: 16,
+                marginLeft: 2,
+                verticalAlign: "text-bottom",
+                background: tokens.colors.accent.DEFAULT,
+                borderRadius: 1,
+                animation: "olecaret 1s steps(2) infinite",
+            }}
+        >
+            <style>{`@keyframes olecaret { 0%,49%{opacity:1} 50%,100%{opacity:0} }`}</style>
+        </span>
+    );
+}
+
+function ThinkingDots() {
+    return (
+        <span style={{ display: "inline-block", marginLeft: 2 }}>
+            <span style={{ animation: "oledot 1.4s infinite", display: "inline-block" }}>.</span>
+            <span style={{ animation: "oledot 1.4s infinite 0.2s", display: "inline-block" }}>.</span>
+            <span style={{ animation: "oledot 1.4s infinite 0.4s", display: "inline-block" }}>.</span>
+            <style>{`@keyframes oledot { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }`}</style>
+        </span>
+    );
+}
+
 // ──────────────────────────────────────────────────────────────────
-// ChatInput — geteilt zwischen Empty und Chat State
+// ChatInput — geteilt zwischen Empty und Chat State (Claude-Style: rund, ruhig)
 // ──────────────────────────────────────────────────────────────────
 function ChatInput({ chatTxt, setChatTxt, taRef, onKeyDown, send, busy, apiKey, sttAvailable, onOpenVoice }) {
     const { tokens } = useTheme();
@@ -396,11 +567,11 @@ function ChatInput({ chatTxt, setChatTxt, taRef, onKeyDown, send, busy, apiKey, 
                 display: "flex",
                 alignItems: "flex-end",
                 gap: 8,
-                padding: "8px 8px 8px 14px",
-                borderRadius: "var(--border-radius-lg)",
-                background: "var(--color-background-primary)",
-                border: "0.5px solid var(--color-border-secondary)",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
+                padding: "12px 14px",
+                borderRadius: tokens.radius.xl,
+                background: tokens.colors.bg.elevated,
+                border: `0.5px solid ${tokens.colors.border.glass}`,
+                boxShadow: tokens.shadow.card,
             }}
         >
             <textarea
@@ -408,21 +579,22 @@ function ChatInput({ chatTxt, setChatTxt, taRef, onKeyDown, send, busy, apiKey, 
                 value={chatTxt}
                 onChange={(e) => setChatTxt(e.target.value)}
                 onKeyDown={onKeyDown}
-                placeholder={apiKey ? "Frage deinen Coach..." : "Erst API Key eintragen (Zahnrad)"}
+                placeholder={apiKey ? "Wie kann ich dir helfen?" : "Erst API Key eintragen (Zahnrad)"}
                 disabled={busy}
                 rows={1}
                 style={{
                     flex: 1,
                     resize: "none",
-                    fontSize: 14,
+                    fontSize: 15,
                     lineHeight: 1.5,
-                    padding: "8px 0",
+                    padding: "6px 4px",
                     border: "none",
                     background: "transparent",
-                    color: "var(--color-text-primary)",
-                    fontFamily: "var(--font-sans)",
+                    color: tokens.colors.text.primary,
+                    fontFamily: tokens.typography.fontFamily.sans,
                     outline: "none",
-                    maxHeight: 160,
+                    minHeight: 24,
+                    maxHeight: 180,
                     overflowY: "auto",
                 }}
             />
@@ -431,49 +603,47 @@ function ChatInput({ chatTxt, setChatTxt, taRef, onKeyDown, send, busy, apiKey, 
                 disabled={!sttAvailable || busy || !apiKey}
                 title={
                     sttAvailable
-                        ? apiKey
-                            ? "Voice-Modus"
-                            : "Erst API Key eintragen"
+                        ? apiKey ? "Voice-Modus" : "Erst API Key eintragen"
                         : "Spracheingabe nicht verfügbar"
                 }
                 style={{
-                    width: 36,
-                    height: 36,
+                    width: 32,
+                    height: 32,
                     borderRadius: "50%",
                     cursor: sttAvailable && !busy && apiKey ? "pointer" : "not-allowed",
-                    border: "0.5px solid var(--color-border-tertiary)",
-                    background: "var(--color-background-secondary)",
-                    color: "var(--color-text-secondary)",
+                    border: `0.5px solid ${tokens.colors.border.glass}`,
+                    background: "transparent",
+                    color: tokens.colors.text.secondary,
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
                     flexShrink: 0,
                 }}
             >
-                <Mic size={15} />
+                <Mic size={14} />
             </button>
             <button
                 onClick={send}
                 disabled={!canSend}
                 style={{
-                    width: 36,
-                    height: 36,
+                    width: 32,
+                    height: 32,
                     fontSize: 16,
                     fontWeight: 700,
                     borderRadius: "50%",
                     cursor: canSend ? "pointer" : "not-allowed",
                     border: "none",
                     background: canSend
-                        ? tokens.colors.accent.gradient
-                        : "var(--color-background-secondary)",
-                    color: canSend ? "#ffffff" : "var(--color-text-tertiary)",
+                        ? tokens.colors.accent.DEFAULT
+                        : tokens.colors.bg.sunken,
+                    color: canSend ? "#ffffff" : tokens.colors.text.tertiary,
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
                     flexShrink: 0,
                 }}
             >
-                →
+                ↑
             </button>
         </div>
     );

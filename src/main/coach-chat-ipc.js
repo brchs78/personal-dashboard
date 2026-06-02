@@ -66,6 +66,8 @@ function init(getWindow, { getHealthSummary } = {}) {
                 if (sync) await sync.refreshCalDAV();
             },
             onToolEvent: (ev) => broadcast(getWindow(), 'coach:tool-event', ev),
+            onStreamDelta: (payload) => broadcast(getWindow(), 'coach:stream-delta', payload),
+            onStreamReset: () => broadcast(getWindow(), 'coach:stream-reset', null),
         };
         try {
             const { messages, text } = await chat({ apiKey, history, userMessage, ctx });

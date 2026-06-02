@@ -1,5 +1,5 @@
-// OLE OS — Coach Chat Loop mit Anthropic Tool-Use
-// Loop: send → response → wenn tool_use → tools ausführen → wieder send …
+// OLE OS — Coach Chat Loop mit Anthropic Tool-Use (Streaming via SSE)
+// Loop: send → SSE stream → wenn tool_use → tools ausführen → wieder send …
 // Bricht nach MAX_LOOP Iterationen mit Fehler ab.
 
 const { TOOLS, dispatch } = require('./coach-chat-tools.js');
@@ -30,13 +30,16 @@ STIL: Knapp, direkt, deutsch. Bestätige Aktionen in einem halben Satz. Schlage 
 HEUTE: ${todayISO()}.`;
 }
 
-async function callAnthropic({ apiKey, messages }) {
+// Parst Anthropic SSE-Stream. Ruft onEvent({ type, ... }) für jedes Event auf
+// und gibt am Ende das vollständige assistant message-content-Array zurück.
+async function streamAnthropic({ apiKey, messages, onEvent }) {
     const r = await fetch(ANTHROPIC_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'x-api-key': apiKey,
             'anthropic-version': '2023-06-01',
+            'accept': 'text/event-stream',
         },
         body: JSON.stringify({
             model: MODEL,
@@ -44,13 +47,81 @@ async function callAnthropic({ apiKey, messages }) {
             system: systemPrompt(),
             tools: TOOLS,
             messages,
+            stream: true,
         }),
     });
     if (!r.ok) {
         const txt = await r.text();
         throw new Error(`Anthropic ${r.status}: ${txt}`);
     }
-    return r.json();
+
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buf = '';
+
+    // Akkumulator für content blocks (text + tool_use), indexiert nach Block-Index
+    const blocks = [];
+    let stopReason = null;
+
+    function parseEvent(rawEvent) {
+        // SSE: 'event: <name>\ndata: <json>\n\n' (oder nur data-Zeilen)
+        const lines = rawEvent.split('\n');
+        let dataLine = '';
+        for (const line of lines) {
+            if (line.startsWith('data:')) {
+                dataLine += line.slice(5).trimStart();
+            }
+        }
+        if (!dataLine) return;
+        let json;
+        try { json = JSON.parse(dataLine); } catch { return; }
+        const type = json.type;
+
+        if (type === 'content_block_start') {
+            const block = json.content_block;
+            blocks[json.index] = block.type === 'text'
+                ? { type: 'text', text: '' }
+                : block.type === 'tool_use'
+                    ? { type: 'tool_use', id: block.id, name: block.name, input: {}, _inputJson: '' }
+                    : { ...block };
+            if (block.type === 'text') onEvent?.({ type: 'text_start' });
+        } else if (type === 'content_block_delta') {
+            const d = json.delta;
+            const b = blocks[json.index];
+            if (!b) return;
+            if (d.type === 'text_delta') {
+                b.text += d.text;
+                onEvent?.({ type: 'text_delta', delta: d.text });
+            } else if (d.type === 'input_json_delta') {
+                b._inputJson += d.partial_json || '';
+            }
+        } else if (type === 'content_block_stop') {
+            const b = blocks[json.index];
+            if (b && b.type === 'tool_use') {
+                try { b.input = b._inputJson ? JSON.parse(b._inputJson) : {}; }
+                catch { b.input = {}; }
+                delete b._inputJson;
+            }
+        } else if (type === 'message_delta') {
+            if (json.delta?.stop_reason) stopReason = json.delta.stop_reason;
+        }
+    }
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        // SSE-Events sind durch '\n\n' getrennt
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+            const evt = buf.slice(0, idx);
+            buf = buf.slice(idx + 2);
+            parseEvent(evt);
+        }
+    }
+    if (buf.trim()) parseEvent(buf);
+
+    return { content: blocks, stop_reason: stopReason };
 }
 
 async function chat({ apiKey, history, userMessage, ctx }) {
@@ -60,7 +131,18 @@ async function chat({ apiKey, history, userMessage, ctx }) {
     const messages = [...(history || []), { role: 'user', content: String(userMessage) }];
 
     for (let i = 0; i < MAX_LOOP; i++) {
-        const resp = await callAnthropic({ apiKey, messages });
+        // Reset des Stream-Buffers im Renderer vor jeder Loop-Iteration
+        ctx?.onStreamReset?.();
+
+        const resp = await streamAnthropic({
+            apiKey,
+            messages,
+            onEvent: (ev) => {
+                if (ev.type === 'text_delta') {
+                    ctx?.onStreamDelta?.({ delta: ev.delta });
+                }
+            },
+        });
         messages.push({ role: 'assistant', content: resp.content });
 
         if (resp.stop_reason !== 'tool_use') {
