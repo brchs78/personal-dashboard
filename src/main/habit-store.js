@@ -61,6 +61,25 @@ function addHabit(partial = {}) {
     return data;
 }
 
+// Partial-Update für bestehende Habits (Name, Emoji, Identity, 2-min, Category)
+function updateHabit(id, patch = {}) {
+    const data = loadRaw();
+    const idx = data.habits.findIndex((h) => h.id === id);
+    if (idx < 0) return data;
+    const current = data.habits[idx];
+    const next = { ...current };
+    if (typeof patch.name === 'string') next.name = patch.name.trim() || current.name;
+    if (typeof patch.emoji === 'string') next.emoji = patch.emoji.trim() || current.emoji;
+    if (typeof patch.identity === 'string') next.identity = patch.identity.trim();
+    if (typeof patch.twoMinuteVersion === 'string') next.twoMinuteVersion = patch.twoMinuteVersion.trim();
+    if (['mindset', 'health', 'productivity', 'fitness'].includes(patch.category)) {
+        next.category = patch.category;
+    }
+    data.habits[idx] = next;
+    saveRaw(data);
+    return data;
+}
+
 // Soft-delete: archived:true preserves streak history
 function removeHabit(id) {
     const data = loadRaw();
@@ -177,4 +196,4 @@ function getStats(days = 30) {
     return stats;
 }
 
-module.exports = { getAll, addHabit, removeHabit, checkin, getStreaks, getStats };
+module.exports = { getAll, addHabit, updateHabit, removeHabit, checkin, getStreaks, getStats };

@@ -63,6 +63,10 @@ export function useHabits() {
         await window.oleAPI?.habit?.add(partial);
     }, []);
 
+    const updateHabit = useCallback(async (id, patch) => {
+        await window.oleAPI?.habit?.update({ id, patch });
+    }, []);
+
     const removeHabit = useCallback(async (id) => {
         await window.oleAPI?.habit?.remove({ id });
     }, []);
@@ -87,5 +91,5 @@ export function useHabits() {
         return Array.isArray(checkins[d]) && checkins[d].includes(habitId);
     }, [checkins]);
 
-    return { habits, checkins, streaks, addHabit, removeHabit, toggleCheckin, todayScore, isCheckedIn, refresh };
+    return { habits, checkins, streaks, addHabit, updateHabit, removeHabit, toggleCheckin, todayScore, isCheckedIn, refresh };
 }

@@ -50,6 +50,7 @@ contextBridge.exposeInMainWorld('oleAPI', {
     habit: {
         getAll:    ()                      => ipcRenderer.invoke('habit:get-all'),
         add:       (partial)               => ipcRenderer.invoke('habit:add', partial),
+        update:    ({ id, patch })         => ipcRenderer.invoke('habit:update', { id, patch }),
         remove:    ({ id })                => ipcRenderer.invoke('habit:remove', { id }),
         checkin:   ({ id, date, done })    => ipcRenderer.invoke('habit:checkin', { id, date, done }),
         onUpdated: (cb) => on('habit:updated', cb),
