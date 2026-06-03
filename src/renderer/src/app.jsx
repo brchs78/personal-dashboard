@@ -6,6 +6,7 @@ import TrainingPlan from "./components/TrainingPlan";
 import Calendar from "./components/Calendar";
 import Todos from "./components/Todos";
 import HabitHub from "./components/HabitHub";
+import RoutineHub from "./components/RoutineHub";
 import { useTheme } from "./hooks/useTheme.jsx";
 
 // ── Speicher-Adapter: nutzt window.storage (Claude) oder localStorage (Electron) ──
@@ -454,6 +455,9 @@ export default function App() {
 
             {/* ── HABITS ── */}
             {tab === "habit" && <HabitHub />}
+
+            {/* ── ROUTINE ── */}
+            {tab === "routine" && <RoutineHub />}
 
             {/* ── BODY ── */}
             {tab === "body" && (

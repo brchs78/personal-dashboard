@@ -32,6 +32,8 @@ export default defineConfig({
                     "habit-ipc": resolve("src/main/habit-ipc.js"),
                     "vault-export": resolve("src/main/vault-export.js"),
                     "vault-export-ipc": resolve("src/main/vault-export-ipc.js"),
+                    "routine-store": resolve("src/main/routine-store.js"),
+                    "routine-ipc": resolve("src/main/routine-ipc.js"),
                 },
             },
         },

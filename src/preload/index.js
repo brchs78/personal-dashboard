@@ -47,6 +47,11 @@ contextBridge.exposeInMainWorld('oleAPI', {
         migrate:    (legacyItems) => ipcRenderer.invoke('todo:migrate', legacyItems),
         onUpdated:  (cb) => on('todo:updated', cb),
     },
+    routine: {
+        getAll:      ()                  => ipcRenderer.invoke('routine:get-all'),
+        setWakeTime: (routineId, time)   => ipcRenderer.invoke('routine:set-wake-time', { routineId, time }),
+        onUpdated:   (cb) => on('routine:updated', cb),
+    },
     habit: {
         getAll:    ()                      => ipcRenderer.invoke('habit:get-all'),
         add:       (partial)               => ipcRenderer.invoke('habit:add', partial),

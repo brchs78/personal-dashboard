@@ -11,6 +11,7 @@ import {
     Activity,
     ListTodo,
     Flame,
+    Sunrise,
     GraduationCap,
     Settings,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
     { id: "health", icon: Activity, label: "Health" },
     { id: "todo", icon: ListTodo, label: "ToDo" },
     { id: "habit", icon: Flame, label: "Habits" },
+    { id: "routine", icon: Sunrise, label: "Routine" },
     { id: "uni", icon: GraduationCap, label: "Uni" },
 ];
 
