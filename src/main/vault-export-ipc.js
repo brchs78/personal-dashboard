@@ -34,6 +34,22 @@ function init(getWindow, deps = {}) {
         return next;
     });
 
+    ipcMain.handle('vault:set-export-coach', (_e, enabled) => {
+        const next = vault.saveSettings({ exportCoach: !!enabled });
+        broadcast(getWindow(), 'vault:updated', next);
+        return next;
+    });
+
+    ipcMain.handle('vault:export-range', async (_e, { from, to } = {}) => {
+        try {
+            const res = vault.exportRange(from, to, deps);
+            broadcast(getWindow(), 'vault:updated', vault.loadSettings());
+            return res;
+        } catch (e) {
+            return { ok: false, error: e?.message || 'export_failed' };
+        }
+    });
+
     ipcMain.handle('vault:export-day', async (_e, date) => {
         try {
             const res = vault.exportDay(date, deps);

@@ -1,6 +1,7 @@
 // OLE OS — Obsidian Vault Export
-// Schreibt Trainings-, Habit- und Daily-Notes als Markdown in einen
+// Schreibt Trainings-, Habit-, Daily- und Coach-Notes als Markdown in einen
 // konfigurierten Obsidian-Vault. Settings persistieren in userData/vault-settings.json.
+// Auto-Section-Marker bewahren User-Edits außerhalb des generierten Blocks.
 
 const { app } = require('electron');
 const fs = require('fs');
@@ -13,7 +14,7 @@ function settingsPath() {
 }
 
 function defaults() {
-    return { path: '', autoExport: false, lastExport: null };
+    return { path: '', autoExport: false, exportCoach: false, lastExport: null };
 }
 
 function loadSettings() {
@@ -40,7 +41,11 @@ const FOLDERS = {
     daily: '20_Daily',
     training: '30_Training',
     habits: '40_Habits',
+    coach: '_ai/coach-sessions',
 };
+
+const BEGIN_MARKER = '<!-- BEGIN auto -->';
+const END_MARKER = '<!-- END auto -->';
 
 function todayISO() {
     return new Date().toISOString().slice(0, 10);
@@ -55,14 +60,31 @@ function ensureVault(vaultPath) {
     }
 }
 
-function writeFile(vaultPath, sub, name, body) {
+// Merge: erhält User-Bereich nach END_MARKER, ersetzt nur Auto-Block dazwischen.
+// Erstschreibung (kein Marker im Bestand) überschreibt komplett.
+function mergePreservingUser(existing, newAutoContent) {
+    const wrapped = `${BEGIN_MARKER}\n${newAutoContent}\n${END_MARKER}`;
+    if (!existing) return wrapped + '\n';
+    const endIdx = existing.indexOf(END_MARKER);
+    if (endIdx < 0) return wrapped + '\n';
+    const userTail = existing.slice(endIdx + END_MARKER.length);
+    return wrapped + userTail;
+}
+
+function writeManaged(vaultPath, sub, name, autoContent) {
     const file = path.join(vaultPath, sub, name);
-    fs.writeFileSync(file, body);
+    const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+    fs.writeFileSync(file, mergePreservingUser(existing, autoContent));
+    return file;
+}
+
+function writeFull(vaultPath, sub, name, content) {
+    const file = path.join(vaultPath, sub, name);
+    fs.writeFileSync(file, content);
     return file;
 }
 
 function yamlString(value) {
-    // Minimaler YAML-String-Escape (Quotes nur wenn nötig)
     if (value == null) return '';
     const s = String(value);
     if (/^[A-Za-z0-9_\-./: ]+$/.test(s) && !/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
@@ -72,11 +94,19 @@ function yamlString(value) {
 function metersToKm(m) { return m == null ? null : Math.round((m / 1000) * 100) / 100; }
 function secToMin(s) { return s == null ? null : Math.round(s / 60); }
 
+function slugify(s) {
+    return String(s || '')
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'habit';
+}
+
 // ── Habit Export ─────────────────────────────────────────────────────────
 
 function exportHabits(vaultPath, date, deps) {
-    const state = deps.getHabits();          // { habits, checkins }
-    const streaks = deps.getStreaks?.() || {}; // { habitId: streak }
+    const state = deps.getHabits();
+    const streaks = deps.getStreaks?.() || {};
     const active = state.habits.filter((h) => !h.archived);
     const doneIds = new Set(state.checkins[date] || []);
     const total = active.length;
@@ -91,6 +121,15 @@ function exportHabits(vaultPath, date, deps) {
     lines.push(`completed: ${completed}`);
     lines.push(`total: ${total}`);
     lines.push(`rate: ${rate}`);
+    if (active.length) {
+        lines.push('streaks:');
+        for (const h of active) {
+            const slug = slugify(h.name);
+            const streak = streaks[h.id] ?? 0;
+            lines.push(`  ${slug}: ${streak}`);
+        }
+    }
+    lines.push('tags: [area/habits, source/ole_os]');
     lines.push(`updated: ${yamlString(new Date().toISOString())}`);
     lines.push('---');
     lines.push('');
@@ -101,20 +140,20 @@ function exportHabits(vaultPath, date, deps) {
     if (active.length === 0) {
         lines.push('_Keine aktiven Habits._');
     } else {
-        lines.push('| Status | Habit | Streak |');
-        lines.push('|--------|-------|--------|');
+        lines.push('| Status | Habit | Identität | Streak |');
+        lines.push('|--------|-------|-----------|--------|');
         for (const h of active) {
             const tick = doneIds.has(h.id) ? '✅' : '⬜';
             const name = `${h.emoji || ''} ${h.name}`.trim();
+            const identity = h.identity ? `*${h.identity}*` : '—';
             const streak = streaks[h.id] ?? 0;
-            lines.push(`| ${tick} | ${name} | ${streak} |`);
+            lines.push(`| ${tick} | ${name} | ${identity} | ${streak} |`);
         }
     }
     lines.push('');
-    lines.push(`[[${FOLDERS.daily}/${date}|← Daily]]`);
-    lines.push('');
+    lines.push(`[[${FOLDERS.daily}/${date}|← Daily]] · [[${FOLDERS.habits}/_index|↑ Index]]`);
 
-    return writeFile(vaultPath, FOLDERS.habits, `${date}.md`, lines.join('\n'));
+    return writeManaged(vaultPath, FOLDERS.habits, `${date}.md`, lines.join('\n'));
 }
 
 // ── Training Export ──────────────────────────────────────────────────────
@@ -123,6 +162,7 @@ function exportTraining(vaultPath, date, deps) {
     const plan = deps.getPlan?.();
     const planDay = plan?.days?.find((d) => d.date === date) || null;
     const cache = deps.getActivities?.() || { activities: [] };
+    const lastSync = cache?.lastSync || null;
     const activities = (cache.activities || []).filter((a) => {
         const d = (a.start_date_local || a.start_date || '').slice(0, 10);
         return d === date;
@@ -146,6 +186,8 @@ function exportTraining(vaultPath, date, deps) {
         if (planDay.distanceKm) lines.push(`distance_km: ${planDay.distanceKm}`);
         if (planDay.durationMin) lines.push(`duration_min: ${planDay.durationMin}`);
     }
+    lines.push('tags: [area/marathon, source/ole_os]');
+    if (lastSync) lines.push(`strava_last_sync: ${yamlString(lastSync)}`);
     lines.push(`updated: ${yamlString(new Date().toISOString())}`);
     lines.push('---');
     lines.push('');
@@ -172,15 +214,19 @@ function exportTraining(vaultPath, date, deps) {
             lines.push(`- **${a.name || a.sport_type || 'Aktivität'}** · ${km ?? '?'} km · ${min ?? '?'} min · Ø HR ${hr}`);
         }
         lines.push('');
-    } else if (!planDay) {
+    } else if (planDay) {
+        lines.push('## Ist (Strava)');
+        const hint = lastSync ? `_Keine Aktivität am ${date} im Cache (letzter Sync: ${new Date(lastSync).toLocaleString('de-DE')})._` : '_Kein Strava-Sync — bitte in OLE OS „Sync" auslösen._';
+        lines.push(hint);
+        lines.push('');
+    } else {
         lines.push('_Kein Plan und keine Aktivität für diesen Tag._');
         lines.push('');
     }
 
-    lines.push(`[[${FOLDERS.daily}/${date}|← Daily]]`);
-    lines.push('');
+    lines.push(`[[${FOLDERS.daily}/${date}|← Daily]] · [[${FOLDERS.training}/_index|↑ Index]] · [[50_Projects/marathon-2026/README|Marathon-Hub]]`);
 
-    return writeFile(vaultPath, FOLDERS.training, `${date}.md`, lines.join('\n'));
+    return writeManaged(vaultPath, FOLDERS.training, `${date}.md`, lines.join('\n'));
 }
 
 // ── Daily Index Export ───────────────────────────────────────────────────
@@ -191,6 +237,7 @@ function exportDaily(vaultPath, date) {
     lines.push('source: ole_os');
     lines.push('type: daily');
     lines.push(`date: ${date}`);
+    lines.push('tags: [type/daily, source/ole_os]');
     lines.push(`updated: ${yamlString(new Date().toISOString())}`);
     lines.push('---');
     lines.push('');
@@ -202,10 +249,56 @@ function exportDaily(vaultPath, date) {
     lines.push('## Habits');
     lines.push(`![[${FOLDERS.habits}/${date}]]`);
     lines.push('');
-    lines.push('## Notizen');
-    lines.push('-');
+    return writeManaged(vaultPath, FOLDERS.daily, `${date}.md`, lines.join('\n'));
+}
+
+// ── Coach Session Export ─────────────────────────────────────────────────
+
+function messageToText(msg) {
+    if (typeof msg.content === 'string') return msg.content.trim();
+    if (Array.isArray(msg.content)) {
+        return msg.content
+            .map((c) => (typeof c === 'string' ? c : c?.text || ''))
+            .filter(Boolean)
+            .join('\n')
+            .trim();
+    }
+    return '';
+}
+
+function exportCoachSessions(vaultPath, date, deps) {
+    if (!deps.getCoachHistory) return null;
+    const history = deps.getCoachHistory() || [];
+    const dayMessages = history.filter((m) => {
+        const ts = m.timestamp || m.created_at || m.ts;
+        if (!ts) return false;
+        const d = new Date(ts).toISOString().slice(0, 10);
+        return d === date;
+    });
+    if (!dayMessages.length) return null;
+
+    const lines = [];
+    lines.push('---');
+    lines.push('source: ole_os');
+    lines.push('type: coach-session');
+    lines.push(`date: ${date}`);
+    lines.push(`message_count: ${dayMessages.length}`);
+    lines.push('tags: [area/coach, source/ole_os]');
+    lines.push(`updated: ${yamlString(new Date().toISOString())}`);
+    lines.push('---');
     lines.push('');
-    return writeFile(vaultPath, FOLDERS.daily, `${date}.md`, lines.join('\n'));
+    lines.push(`# Coach-Session · ${date}`);
+    lines.push('');
+    for (const m of dayMessages) {
+        const role = m.role === 'assistant' ? '🤖 Coach' : m.role === 'user' ? '👤 Ole' : `_${m.role}_`;
+        const text = messageToText(m);
+        if (!text) continue;
+        lines.push(`### ${role}`);
+        lines.push(text);
+        lines.push('');
+    }
+    lines.push(`[[${FOLDERS.daily}/${date}|← Daily]]`);
+    return writeFull(vaultPath, FOLDERS.coach, `${date}.md`, lines.join('\n'));
 }
 
 // ── Orchestrator ─────────────────────────────────────────────────────────
@@ -219,15 +312,41 @@ function exportDay(date, deps) {
         training: exportTraining(settings.path, d, deps),
         daily: exportDaily(settings.path, d),
     };
+    if (settings.exportCoach) {
+        const coach = exportCoachSessions(settings.path, d, deps);
+        if (coach) files.coach = coach;
+    }
     saveSettings({ lastExport: new Date().toISOString() });
     return { ok: true, date: d, files };
+}
+
+function exportRange(fromDate, toDate, deps) {
+    const settings = loadSettings();
+    ensureVault(settings.path);
+    const start = new Date(fromDate);
+    const end = new Date(toDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        throw new Error('invalid_range');
+    }
+    const results = [];
+    for (let cur = new Date(start); cur <= end; cur.setDate(cur.getDate() + 1)) {
+        const d = cur.toISOString().slice(0, 10);
+        try {
+            results.push(exportDay(d, deps));
+        } catch (e) {
+            results.push({ ok: false, date: d, error: e?.message });
+        }
+    }
+    return { ok: true, count: results.length, results };
 }
 
 module.exports = {
     loadSettings,
     saveSettings,
     exportDay,
+    exportRange,
     exportHabits,
     exportTraining,
     exportDaily,
+    exportCoachSessions,
 };

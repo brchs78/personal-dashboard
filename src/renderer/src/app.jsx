@@ -179,6 +179,22 @@ export default function App() {
             setVaultSettings(s);
         } catch (e) { setVaultMsg(`Fehler: ${e?.message || e}`); }
     }
+    async function vaultToggleCoach(enabled) {
+        try {
+            const s = await window.oleAPI.vault.setExportCoach(enabled);
+            setVaultSettings(s);
+        } catch (e) { setVaultMsg(`Fehler: ${e?.message || e}`); }
+    }
+    async function vaultBackfill30() {
+        if (!vaultSettings?.path) return;
+        setVaultBusy(true); setVaultMsg(null);
+        const to = new Date(); const from = new Date(); from.setDate(from.getDate() - 29);
+        try {
+            const res = await window.oleAPI.vault.exportRange(from.toISOString().slice(0, 10), to.toISOString().slice(0, 10));
+            setVaultMsg(res?.ok ? `Backfill OK · ${res.count} Tage` : `Fehler: ${res?.error || 'unbekannt'}`);
+        } catch (e) { setVaultMsg(`Fehler: ${e?.message || e}`); }
+        setVaultBusy(false);
+    }
 
     useEffect(() => {
         loadAll();
@@ -396,6 +412,13 @@ export default function App() {
                             <input type="checkbox" checked={!!vaultSettings?.autoExport} onChange={(e) => vaultToggleAuto(e.target.checked)} disabled={!vaultSettings?.path} />
                             Täglich 21:30 automatisch exportieren
                         </label>
+                        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 8, cursor: "pointer" }}>
+                            <input type="checkbox" checked={!!vaultSettings?.exportCoach} onChange={(e) => vaultToggleCoach(e.target.checked)} disabled={!vaultSettings?.path} />
+                            Coach-Chat mit-exportieren <span style={{ color: "var(--color-text-tertiary)" }}>(in _ai/coach-sessions/)</span>
+                        </label>
+                        <button onClick={vaultBackfill30} disabled={!vaultSettings?.path || vaultBusy} style={{ width: "100%", padding: "8px", borderRadius: "var(--border-radius-md)", cursor: vaultSettings?.path && !vaultBusy ? "pointer" : "not-allowed", opacity: vaultSettings?.path && !vaultBusy ? 1 : 0.5, fontSize: 12, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-primary)", marginBottom: 4 }}>
+                            {vaultBusy ? "Backfill läuft…" : "Backfill: letzte 30 Tage exportieren"}
+                        </button>
                         {vaultMsg && <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: "4px 0 0" }}>{vaultMsg}</p>}
                         {vaultSettings?.lastExport && <p style={{ fontSize: 10, color: "var(--color-text-tertiary)", margin: "4px 0 12px" }}>Letzter Export: {new Date(vaultSettings.lastExport).toLocaleString("de-DE")}</p>}
                         {!vaultSettings?.lastExport && <div style={{ marginBottom: 12 }} />}

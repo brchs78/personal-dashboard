@@ -111,6 +111,14 @@ function startScheduler(vaultDeps) {
                         console.log('[vault-export] daily export OK:', res.date)
                     } catch (e) {
                         console.warn('[vault-export] daily export failed:', e?.message)
+                        new Notification({
+                            title: 'Vault-Export fehlgeschlagen',
+                            body: e?.message === 'vault_path_not_set'
+                                ? 'Kein Vault-Pfad gesetzt — Settings → Obsidian Vault.'
+                                : e?.message === 'vault_path_missing'
+                                ? 'Vault-Ordner nicht gefunden.'
+                                : `Fehler: ${e?.message || 'unbekannt'}`,
+                        }).show()
                     }
                 }
             }
@@ -130,6 +138,7 @@ app.whenReady().then(() => {
         getStreaks: habitStore.getStreaks,
         getPlan: coachPlanStore.loadCurrent,
         getActivities: stravaStore.loadCache,
+        getCoachHistory: coachChatIPC.loadHistory,
     }
     createWindow(); registerHotkey(); createTray(); startScheduler(vaultDeps)
     healthIPC.init(() => mainWindow)

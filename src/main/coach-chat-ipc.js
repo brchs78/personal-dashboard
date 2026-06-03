@@ -82,4 +82,4 @@ function init(getWindow, { getHealthSummary } = {}) {
     });
 }
 
-module.exports = { init };
+module.exports = { init, loadHistory };
