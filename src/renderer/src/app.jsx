@@ -144,11 +144,41 @@ export default function App() {
     const [studyPlans, setStudyPlans] = useState({}); const [spBusy, setSpBusy] = useState(null);
     const [calDate, setCalDate] = useState(new Date());
     const [healthSrc, setHealthSrc] = useState(null);
+    const [vaultSettings, setVaultSettings] = useState(null);
+    const [vaultBusy, setVaultBusy] = useState(false);
+    const [vaultMsg, setVaultMsg] = useState(null);
 
     useEffect(() => {
         if (!showSettings) return;
         window.oleAPI?.health?.sourceStatus?.().then(s => setHealthSrc(s)).catch(() => {});
+        window.oleAPI?.vault?.getSettings?.().then(s => setVaultSettings(s)).catch(() => {});
     }, [showSettings]);
+
+    useEffect(() => {
+        if (!window.oleAPI?.vault?.onUpdated) return;
+        return window.oleAPI.vault.onUpdated((s) => setVaultSettings(s));
+    }, []);
+
+    async function vaultPickPath() {
+        try {
+            const s = await window.oleAPI.vault.setPath();
+            setVaultSettings(s);
+        } catch (e) { setVaultMsg(`Fehler: ${e?.message || e}`); }
+    }
+    async function vaultExportNow() {
+        setVaultBusy(true); setVaultMsg(null);
+        try {
+            const res = await window.oleAPI.vault.exportToday();
+            setVaultMsg(res?.ok ? `Export OK · ${res.date}` : `Fehler: ${res?.error || 'unbekannt'}`);
+        } catch (e) { setVaultMsg(`Fehler: ${e?.message || e}`); }
+        setVaultBusy(false);
+    }
+    async function vaultToggleAuto(enabled) {
+        try {
+            const s = await window.oleAPI.vault.setAutoExport(enabled);
+            setVaultSettings(s);
+        } catch (e) { setVaultMsg(`Fehler: ${e?.message || e}`); }
+    }
 
     useEffect(() => {
         loadAll();
@@ -353,6 +383,22 @@ export default function App() {
                                 ? <><span style={{ color: tokens.colors.status?.success ?? "#22c55e" }}>✓</span>{" "}Export gefunden · {healthSrc.exportDate ? `Exportiert ${new Date(healthSrc.exportDate).toLocaleDateString("de-DE")}` : "Datum unbekannt"}</>
                                 : <><span style={{ color: tokens.colors.status?.warning ?? "#f59e0b" }}>⚠</span>{" "}Kein Export gefunden — lege <code style={{ fontSize: 11 }}>~/apple_health_export/Export.xml</code> an</>}
                         </div>
+                        <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 4px" }}>Obsidian Vault</p>
+                        <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: "0 0 8px", lineHeight: 1.5 }}>Exportiert Training, Habits und einen Tages-Index als Markdown in deinen Vault. Bridge für Claude Code, Gemini & Co.</p>
+                        <div style={{ fontSize: 11, padding: "8px 10px", borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)", color: "var(--color-text-secondary)", marginBottom: 8, fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>
+                            {vaultSettings?.path ? vaultSettings.path : "Kein Pfad gesetzt"}
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                            <button onClick={vaultPickPath} style={{ flex: 1, padding: "8px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontSize: 12, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-primary)" }}>Pfad wählen…</button>
+                            <button onClick={vaultExportNow} disabled={!vaultSettings?.path || vaultBusy} style={{ flex: 1, padding: "8px", borderRadius: "var(--border-radius-md)", cursor: vaultSettings?.path && !vaultBusy ? "pointer" : "not-allowed", opacity: vaultSettings?.path && !vaultBusy ? 1 : 0.5, fontSize: 12, background: tokens.colors.accent.soft, border: `0.5px solid ${tokens.colors.accent.border}`, color: tokens.colors.accent.DEFAULT }}>{vaultBusy ? "Exportiere…" : "Jetzt exportieren"}</button>
+                        </div>
+                        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 4, cursor: "pointer" }}>
+                            <input type="checkbox" checked={!!vaultSettings?.autoExport} onChange={(e) => vaultToggleAuto(e.target.checked)} disabled={!vaultSettings?.path} />
+                            Täglich 21:30 automatisch exportieren
+                        </label>
+                        {vaultMsg && <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: "4px 0 0" }}>{vaultMsg}</p>}
+                        {vaultSettings?.lastExport && <p style={{ fontSize: 10, color: "var(--color-text-tertiary)", margin: "4px 0 12px" }}>Letzter Export: {new Date(vaultSettings.lastExport).toLocaleString("de-DE")}</p>}
+                        {!vaultSettings?.lastExport && <div style={{ marginBottom: 12 }} />}
                         <div style={{ display: "flex", gap: 8 }}>
                             <button onClick={saveKey} style={{ flex: 1, padding: "10px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontWeight: 700, fontSize: 13, border: "none", background: tokens.colors.accent.DEFAULT, color: "#ffffff" }}>Speichern</button>
                             <button onClick={() => setShowSettings(false)} style={{ padding: "10px 16px", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontSize: 13, background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-secondary)" }}>Abbrechen</button>

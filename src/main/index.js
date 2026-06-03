@@ -10,6 +10,11 @@ const todoIPC = require('./todo-ipc.js')
 const coachChatIPC = require('./coach-chat-ipc.js')
 const calendarIPC = require('./calendar-ipc.js')
 const habitIPC = require('./habit-ipc.js')
+const habitStore = require('./habit-store.js')
+const coachPlanStore = require('./coach-plan-store.js')
+const stravaStore = require('./strava-store.js')
+const vaultExportIPC = require('./vault-export-ipc.js')
+const vaultExport = require('./vault-export.js')
 
 let mainWindow = null
 let tray = null
@@ -83,7 +88,7 @@ function updateTrayTitle() {
     tray.setTitle(`  🏃 ${days}d`)
 }
 
-function startScheduler() {
+function startScheduler(vaultDeps) {
     const routines = [
         { time: '07:00', id: 'morning', title: 'Guten Morgen, Ole', body: 'Dein Tagesplan ist bereit.' },
         { time: '15:00', id: 'run', title: 'Lauf-Check', body: 'Heute schon trainiert?' },
@@ -100,6 +105,14 @@ function startScheduler() {
                 if (mainWindow && !mainWindow.isDestroyed()) {
                     mainWindow.webContents.send('routine-trigger', r.id)
                 }
+                if (r.id === 'evening' && vaultExport.loadSettings().autoExport) {
+                    try {
+                        const res = vaultExport.exportDay(null, vaultDeps)
+                        console.log('[vault-export] daily export OK:', res.date)
+                    } catch (e) {
+                        console.warn('[vault-export] daily export failed:', e?.message)
+                    }
+                }
             }
         })
     }, 30 * 1000)
@@ -112,7 +125,13 @@ ipcMain.on('hide-window', () => {
 app.on('before-quit', () => { isQuitting = true })
 
 app.whenReady().then(() => {
-    createWindow(); registerHotkey(); createTray(); startScheduler()
+    const vaultDeps = {
+        getHabits: habitStore.getAll,
+        getStreaks: habitStore.getStreaks,
+        getPlan: coachPlanStore.loadCurrent,
+        getActivities: stravaStore.loadCache,
+    }
+    createWindow(); registerHotkey(); createTray(); startScheduler(vaultDeps)
     healthIPC.init(() => mainWindow)
     stravaIPC.init(() => mainWindow)
     coachPlanIPC.init(() => mainWindow, {
@@ -125,6 +144,7 @@ app.whenReady().then(() => {
     coachChatIPC.init(() => mainWindow, {
         getHealthSummary: healthIPC.getCurrentSummary,
     })
+    vaultExportIPC.init(() => mainWindow, vaultDeps)
     app.on('activate', () => showWindow())
 })
 app.on('will-quit', () => globalShortcut.unregisterAll())

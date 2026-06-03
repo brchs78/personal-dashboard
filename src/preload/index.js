@@ -64,6 +64,14 @@ contextBridge.exposeInMainWorld('oleAPI', {
         onStreamDelta:    (cb) => on('coach:stream-delta', cb),
         onStreamReset:    (cb) => on('coach:stream-reset', cb),
     },
+    vault: {
+        getSettings:   () => ipcRenderer.invoke('vault:get-settings'),
+        setPath:       () => ipcRenderer.invoke('vault:set-path'),
+        setAutoExport: (enabled) => ipcRenderer.invoke('vault:set-auto-export', enabled),
+        exportDay:     (date) => ipcRenderer.invoke('vault:export-day', date),
+        exportToday:   () => ipcRenderer.invoke('vault:export-today'),
+        onUpdated:     (cb) => on('vault:updated', cb),
+    },
     calendar: {
         list:           () => ipcRenderer.invoke('calendar:list'),
         refreshNow:     () => ipcRenderer.invoke('calendar:refresh-now'),

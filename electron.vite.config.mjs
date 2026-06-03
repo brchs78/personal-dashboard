@@ -30,6 +30,8 @@ export default defineConfig({
                     "calendar-ipc": resolve("src/main/calendar-ipc.js"),
                     "habit-store": resolve("src/main/habit-store.js"),
                     "habit-ipc": resolve("src/main/habit-ipc.js"),
+                    "vault-export": resolve("src/main/vault-export.js"),
+                    "vault-export-ipc": resolve("src/main/vault-export-ipc.js"),
                 },
             },
         },
