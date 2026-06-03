@@ -1,6 +1,6 @@
 // OLE OS — Routine Hub (Morgen-/Abendroutine)
-// Zeigt die Routine als Timeline mit dynamisch berechneten Zeiten ab Aufwachzeit.
-// Aufwachzeit ist einstellbar; alle Zeiten + Spezialregeln verschieben sich live.
+// Zeigt die Routine als Timeline mit dynamisch berechneten Zeiten.
+// Morgen: vorwärts ab Aufwachzeit. Abend: rückwärts von Schlafenszeit.
 import { useState } from "react";
 import { Sunrise, Moon, Clock, CheckCircle2 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme.jsx";
@@ -12,15 +12,41 @@ function categoryColor(category, tokens) {
         case "Körper":    return tokens.colors.tab.workout;
         case "Ernährung": return tokens.colors.status.success;
         case "Mentales":  return tokens.colors.accent.secondary;
+        case "Pflege":    return tokens.colors.status.info;
+        case "Lernen":    return tokens.colors.tab.calendar;
         case "Routine":
         default:          return tokens.colors.tab.uni;
     }
 }
 
+// Text für eine Spezialregel je nach mode.
+function ruleText(r) {
+    switch (r.mode) {
+        case "from":
+        case "fromStart":   return `${r.label} ab ${r.time} Uhr`;
+        case "mondayUntil": return `Montags ${r.label} bis ${r.time} Uhr`;
+        case "static":      return r.label;
+        case "fixed":       return `${r.label} nach ${r.time} Uhr`;
+        default:            return `${r.label} bis ${r.time} Uhr`;
+    }
+}
+
 const ROUTINE_TABS = [
     { id: "morning", label: "Morgen", icon: Sunrise, enabled: true },
-    { id: "evening", label: "Abend", icon: Moon, enabled: false },
+    { id: "evening", label: "Abend", icon: Moon, enabled: true },
 ];
+
+// Pro Routine: Icon und Label für den Ankerzeit-Picker.
+const ANCHOR_META = {
+    morning: { icon: Sunrise, label: "Aufwachzeit",   hint: "Alle Zeiten passen sich automatisch an" },
+    evening: { icon: Moon,    label: "Schlafenszeit", hint: "Zeiten werden rückwärts berechnet" },
+};
+
+// Footer-Label je Routine.
+const FOOTER_LABEL = {
+    morning: (time) => `Fertig um ${time} Uhr`,
+    evening: (time) => `Licht aus um ${time} Uhr`,
+};
 
 export default function RoutineHub() {
     const { tokens, mode } = useTheme();
@@ -29,6 +55,8 @@ export default function RoutineHub() {
     const accent = tokens.colors.tab.routine;
 
     const isMonday = new Date().getDay() === 1;
+    const anchorMeta = ANCHOR_META[activeId] ?? ANCHOR_META.morning;
+    const AnchorIcon = anchorMeta.icon;
 
     return (
         <div
@@ -43,13 +71,12 @@ export default function RoutineHub() {
         >
             {/* ── Header: Routine-Switch ── */}
             <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-                {ROUTINE_TABS.map(({ id, label, icon: Icon, enabled }) => {
+                {ROUTINE_TABS.map(({ id, label, icon: Icon }) => {
                     const active = id === activeId;
                     return (
                         <button
                             key={id}
-                            onClick={() => enabled && setActiveId(id)}
-                            disabled={!enabled}
+                            onClick={() => setActiveId(id)}
                             style={{
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -59,8 +86,7 @@ export default function RoutineHub() {
                                 border: `0.5px solid ${active ? accent : tokens.colors.border.glass}`,
                                 background: active ? `${accent}1a` : "transparent",
                                 color: active ? accent : tokens.colors.text.secondary,
-                                cursor: enabled ? "pointer" : "not-allowed",
-                                opacity: enabled ? 1 : 0.45,
+                                cursor: "pointer",
                                 fontFamily: tokens.typography.fontFamily.sans,
                                 fontWeight: tokens.typography.fontWeight.semibold,
                                 fontSize: tokens.typography.fontSize.sm,
@@ -68,9 +94,6 @@ export default function RoutineHub() {
                         >
                             <Icon size={15} strokeWidth={2} />
                             {label}
-                            {!enabled && (
-                                <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 500 }}>bald</span>
-                            )}
                         </button>
                     );
                 })}
@@ -82,7 +105,7 @@ export default function RoutineHub() {
                 </p>
             ) : (
                 <>
-                    {/* ── Aufwachzeit-Karte ── */}
+                    {/* ── Ankerzeit-Karte (Aufwachzeit / Schlafenszeit) ── */}
                     <div
                         style={{
                             ...tokens.glass.card,
@@ -94,7 +117,7 @@ export default function RoutineHub() {
                         }}
                     >
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <Sunrise size={20} strokeWidth={2} style={{ color: accent }} />
+                            <AnchorIcon size={20} strokeWidth={2} style={{ color: accent }} />
                             <div>
                                 <div style={{
                                     fontFamily: tokens.typography.fontFamily.sans,
@@ -102,10 +125,10 @@ export default function RoutineHub() {
                                     fontSize: tokens.typography.fontSize.sm,
                                     color: tokens.colors.text.primary,
                                 }}>
-                                    Aufwachzeit
+                                    {anchorMeta.label}
                                 </div>
                                 <div style={{ fontSize: 11.5, color: tokens.colors.text.tertiary }}>
-                                    Alle Zeiten passen sich automatisch an
+                                    {anchorMeta.hint}
                                 </div>
                             </div>
                         </div>
@@ -131,12 +154,6 @@ export default function RoutineHub() {
                         {schedule.rules.map((r) => {
                             const mondayOnly = r.mode === "mondayUntil";
                             const dim = mondayOnly && !isMonday;
-                            const text =
-                                r.mode === "from"
-                                    ? `${r.label} ab ${r.time} Uhr`
-                                    : r.mode === "mondayUntil"
-                                    ? `Montags ${r.label} bis ${r.time} Uhr`
-                                    : `${r.label} bis ${r.time} Uhr`;
                             return (
                                 <div
                                     key={r.id}
@@ -154,7 +171,7 @@ export default function RoutineHub() {
                                     }}
                                 >
                                     <span style={{ fontSize: 13 }}>{r.emoji}</span>
-                                    {text}
+                                    {ruleText(r)}
                                 </div>
                             );
                         })}
@@ -246,7 +263,7 @@ export default function RoutineHub() {
                         })}
                     </div>
 
-                    {/* ── Footer: Fertig + Gesamtdauer ── */}
+                    {/* ── Footer: Ende + Gesamtdauer ── */}
                     <div
                         style={{
                             ...tokens.glass.cardStrong,
@@ -265,7 +282,7 @@ export default function RoutineHub() {
                                 fontSize: tokens.typography.fontSize.sm,
                                 color: tokens.colors.text.primary,
                             }}>
-                                Fertig um {schedule.endTime} Uhr
+                                {(FOOTER_LABEL[activeId] ?? FOOTER_LABEL.morning)(schedule.endTime)}
                             </div>
                             <div style={{
                                 display: "inline-flex",
