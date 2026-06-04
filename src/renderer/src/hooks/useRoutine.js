@@ -78,10 +78,18 @@ export function useRoutine(routineId = "morning") {
         await window.oleAPI?.routine?.setWakeTime(routineId, time);
     }, [routineId]);
 
+    const updateSteps = useCallback(async (steps) => {
+        // Optimistisch lokal setzen, IPC bestätigt via onUpdated
+        setRoutines((prev) =>
+            prev[routineId] ? { ...prev, [routineId]: { ...prev[routineId], steps } } : prev
+        );
+        await window.oleAPI?.routine?.updateSteps(routineId, steps);
+    }, [routineId]);
+
     const schedule = useMemo(
         () => computeSchedule(routines[routineId], routineId),
         [routines, routineId]
     );
 
-    return { routine: routines[routineId], schedule, setWakeTime, refresh };
+    return { routine: routines[routineId], schedule, setWakeTime, updateSteps, refresh };
 }

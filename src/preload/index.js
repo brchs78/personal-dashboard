@@ -50,6 +50,7 @@ contextBridge.exposeInMainWorld('oleAPI', {
     routine: {
         getAll:      ()                  => ipcRenderer.invoke('routine:get-all'),
         setWakeTime: (routineId, time)   => ipcRenderer.invoke('routine:set-wake-time', { routineId, time }),
+        updateSteps: (routineId, steps)  => ipcRenderer.invoke('routine:update-steps', { routineId, steps }),
         onUpdated:   (cb) => on('routine:updated', cb),
     },
     habit: {

@@ -1,5 +1,5 @@
 // OLE OS — Routine IPC Bridge
-// Handlers: routine:get-all, routine:set-wake-time
+// Handlers: routine:get-all, routine:set-wake-time, routine:update-steps
 // Broadcasts 'routine:updated' nach jeder Mutation.
 
 const { ipcMain } = require('electron');
@@ -19,6 +19,10 @@ function init(getWindow) {
 
     ipcMain.handle('routine:set-wake-time', (_e, { routineId, time } = {}) =>
         emit(store.setWakeTime(routineId, time))
+    );
+
+    ipcMain.handle('routine:update-steps', (_e, { routineId, steps } = {}) =>
+        emit(store.updateSteps(routineId, steps))
     );
 }
 
