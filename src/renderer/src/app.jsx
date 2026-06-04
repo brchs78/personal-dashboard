@@ -56,7 +56,7 @@ IDENTITÄT: Ole, VWL-Student 2. Semester, LMU München. 193cm, 72kg.
 TRAINING: Volume over Speed. Marathon Sub 3:10h (Pace 4:30/km) am 11.10.2026. Zone-2-Laufen ist Kern. Aktuell Phase 1 Base-Building.
 WOCHE: Mo Easy+Yoga · Di Hockey · Mi Easy+Gym · Do Hockey · Fr Rad · Sa Long Run · So Rest (Yoga+Mobility). Lauf-km nur Mo/Mi/Sa.
 PHYSIOLOGIE: Starkes KV-System. Schwäche: Periphere Muskulatur acidifiziert bei Threshold.
-STATUS: Post-Weisheitszahn-OP + Antibiotika. Erlaubt: Zone 1–2, Hockey, Rad, Yoga. Verboten: Pool, Schwerheben, Max-Intensität. Heilung hat Vorrang.
+STATUS: Vollständig auskuriert und wieder voll leistungsfähig. Keine gesundheitlichen Einschränkungen. Volle Intensität (Threshold, Intervalle, Max) je nach Trainingsphase erlaubt.
 Antworte auf Deutsch. Direkt wie ein Elite-Coach.`;
 
 const WG = [40, 0, 55, 40, 0, 80, 30];
@@ -218,11 +218,11 @@ export default function App() {
         const ex = exams.map(e => `${e.name} in ${dTo(e.date)} Tagen`).join(", ") || "keine";
         const cs = tc.length ? tc.map(c => `${c.name} ${c.time}`).join(", ") : "keine Vorlesungen";
         try {
-            const raw = await callAI([{ role: "user", content: `Heute: ${ds}. Erstelle Oles Tagesplan.\nKurse: ${cs}\nKlausuren: ${ex}\nPost-OP Zone 1-2\nJSON only:\n{"summary":"string","warn":"string or null","blocks":[{"time":"HH:MM","type":"uni|sport|break","title":"string","note":"string or null"}]}` }], 600);
+            const raw = await callAI([{ role: "user", content: `Heute: ${ds}. Erstelle Oles Tagesplan.\nKurse: ${cs}\nKlausuren: ${ex}\nVoll leistungsfähig, Intensität je nach Trainingsphase\nJSON only:\n{"summary":"string","warn":"string or null","blocks":[{"time":"HH:MM","type":"uni|sport|break","title":"string","note":"string or null"}]}` }], 600);
             const p = JSON.parse(raw.replace(/```json|```/g, "").trim());
             setPlan(p); save("ole:day-plan", { day: new Date().toDateString(), p });
         } catch {
-            setPlan({ summary: "Lernen + leichte Bewegung.", warn: "Post-OP: kein erhöhter Blutdruck.", blocks: [{ time: "08:00", type: "uni", title: tc[0]?.name || "Lernzeit", note: null }, { time: "14:30", type: "sport", title: "Zone 2 Lauf 40 min", note: "Puls unter 155" }] });
+            setPlan({ summary: "Lernen + leichte Bewegung.", warn: null, blocks: [{ time: "08:00", type: "uni", title: tc[0]?.name || "Lernzeit", note: null }, { time: "14:30", type: "sport", title: "Zone 2 Lauf 40 min", note: "Puls unter 155" }] });
         }
         setPlanBusy(false);
     }

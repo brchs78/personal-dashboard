@@ -28,6 +28,10 @@ function loadCurrent() {
     return loadAll().current;
 }
 
+function loadHistory() {
+    return loadAll().history || [];
+}
+
 function saveCurrent(plan) {
     const all = loadAll();
     if (all.current) {
@@ -66,4 +70,4 @@ function clear() {
     try { fs.unlinkSync(planPath()); } catch {}
 }
 
-module.exports = { loadCurrent, saveCurrent, markDone, getDone, updateDay, clear };
+module.exports = { loadCurrent, loadHistory, saveCurrent, markDone, getDone, updateDay, clear };

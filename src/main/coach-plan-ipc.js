@@ -22,11 +22,14 @@ function init(getWindow, { getHealthSummary, getHealthTrend } = {}) {
         done: store.getDone(),
     }));
 
-    ipcMain.handle('plan:generate', async (_e, { apiKey, weekStart } = {}) => {
+    ipcMain.handle('plan:generate', async (_e, { apiKey, weekStart, availableRunDays } = {}) => {
         const health = healthGetter();
         const hrvTrend = healthTrendGetter('hrv', 7) || [];
         const stravaCache = stravaStore.loadCache();
         const activities = stravaCache?.activities || [];
+        const prevPlan = store.loadCurrent();
+        const history = store.loadHistory();
+        const done = store.getDone();
 
         const plan = await coachPlan.generatePlan({
             apiKey,
@@ -34,10 +37,26 @@ function init(getWindow, { getHealthSummary, getHealthTrend } = {}) {
             hrvTrend,
             activities,
             weekStart,
+            prevPlan,
+            history,
+            done,
+            availableRunDays,
         });
         store.saveCurrent(plan);
         broadcast(getWindow(), 'plan:updated', { plan });
         return plan;
+    });
+
+    ipcMain.handle('plan:recommend-frequency', () => {
+        const prevPlan = store.loadCurrent();
+        const total = (prevPlan?.days || []).reduce((s, d) => s + (d.distanceKm || 0), 0);
+        const weekStart = coachPlan.thisMonday();
+        return {
+            recommendedRunDays: coachPlan.recommendRunDays(total),
+            lastWeeklyKm: Math.round(total),
+            phase: coachPlan.computePhase(weekStart),
+            weeksToMarathon: coachPlan.weeksToMarathon(weekStart),
+        };
     });
 
     ipcMain.handle('plan:mark-done', (_e, { date, done }) => {

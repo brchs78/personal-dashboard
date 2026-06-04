@@ -33,19 +33,24 @@ export function useTrainingPlan() {
         return () => { unsubPlan?.(); unsubDone?.(); };
     }, [refresh]);
 
-    const generate = useCallback(async (weekStart) => {
+    const generate = useCallback(async (weekStart, availableRunDays) => {
         const a = api(); if (!a) return;
         const apiKey = getKey();
         if (!apiKey) { setError('Kein API-Key in Settings hinterlegt'); return; }
         setBusy(true); setError(null);
         try {
-            const next = await a.generate({ apiKey, weekStart });
+            const next = await a.generate({ apiKey, weekStart, availableRunDays });
             setPlan(next);
         } catch (e) {
             setError(String(e?.message || e));
         } finally {
             setBusy(false);
         }
+    }, []);
+
+    const recommendFrequency = useCallback(async () => {
+        const a = api(); if (!a?.recommendFrequency) return null;
+        try { return await a.recommendFrequency(); } catch { return null; }
     }, []);
 
     const toggleDone = useCallback(async (date) => {
@@ -67,5 +72,5 @@ export function useTrainingPlan() {
         setPlan(null);
     }, []);
 
-    return { plan, done, busy, error, generate, toggleDone, updateDay, clear, refresh };
+    return { plan, done, busy, error, generate, recommendFrequency, toggleDone, updateDay, clear, refresh };
 }

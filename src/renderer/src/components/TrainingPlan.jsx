@@ -2,7 +2,7 @@
 // Generiert via Anthropic API in main-process auf Basis von Health + Strava.
 
 import { useState } from 'react';
-import { Sparkles, RefreshCw, CheckCircle2, Circle, Calendar, Flame, Moon, Pencil, X } from 'lucide-react';
+import { Sparkles, RefreshCw, CheckCircle2, Circle, Calendar, Flame, Moon, Pencil, X, CalendarClock, ArrowRight } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTrainingPlan } from '../hooks/useTrainingPlan';
 import { useTheme } from "../hooks/useTheme.jsx";
@@ -25,23 +25,43 @@ function getTypeColor(tokens) {
 export default function TrainingPlan() {
     const { tokens } = useTheme();
     const TYPE_COLOR = getTypeColor(tokens);
-    const { plan, done, busy, error, generate, toggleDone, updateDay } = useTrainingPlan();
+    const { plan, done, busy, error, generate, recommendFrequency, toggleDone, updateDay } = useTrainingPlan();
     const [editing, setEditing] = useState(null); // day object or null
+    const [freqOpen, setFreqOpen] = useState(false);
+    const [reco, setReco] = useState(null);
+
+    async function openFrequency() {
+        const r = await recommendFrequency();
+        setReco(r);
+        setFreqOpen(true);
+    }
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.lg, padding: tokens.spacing.lg }}>
-            <Header plan={plan} busy={busy} onGenerate={() => generate()} />
+            <Header plan={plan} busy={busy} onGenerate={openFrequency} />
             {error && <ErrorCard message={error} />}
-            {!plan && !busy && <EmptyState onGenerate={() => generate()} />}
+            {!plan && !busy && <EmptyState onGenerate={openFrequency} />}
             {busy && <BusyCard />}
             {plan && (
                 <>
                     <WeekSummary plan={plan} done={done} />
+                    {plan.coachNote && <CoachNote note={plan.coachNote} />}
                     <DaysList plan={plan} done={done} onToggle={toggleDone} onEdit={setEditing} />
+                    {plan.nextWeekPreview && <NextWeekPreview preview={plan.nextWeekPreview} />}
                     <PhaseExplainer phase={plan.phase} />
                 </>
             )}
             <AnimatePresence>
+                {freqOpen && (
+                    <FrequencyModal
+                        reco={reco}
+                        onClose={() => setFreqOpen(false)}
+                        onConfirm={(runDays) => {
+                            setFreqOpen(false);
+                            generate(undefined, runDays);
+                        }}
+                    />
+                )}
                 {editing && (
                     <DayEditModal
                         day={editing}
@@ -54,6 +74,151 @@ export default function TrainingPlan() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+function CoachNote({ note }) {
+    const { tokens } = useTheme();
+    return (
+        <div style={{ ...tokens.glass.card, padding: tokens.spacing.md, display: 'flex', gap: tokens.spacing.sm, alignItems: 'flex-start', borderLeft: `3px solid ${tokens.colors.accent.secondary}` }}>
+            <Sparkles size={16} color={tokens.colors.accent.secondary} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+            <p style={{ margin: 0, fontSize: 13, color: tokens.colors.text.secondary, lineHeight: 1.55, fontStyle: 'italic' }}>
+                {note}
+            </p>
+        </div>
+    );
+}
+
+function NextWeekPreview({ preview }) {
+    const { tokens } = useTheme();
+    return (
+        <div style={{
+            ...tokens.glass.card,
+            padding: tokens.spacing.md,
+            display: 'flex',
+            gap: tokens.spacing.md,
+            alignItems: 'center',
+            borderStyle: 'dashed',
+            borderColor: tokens.colors.border.glass,
+        }}>
+            <CalendarClock size={20} color={tokens.colors.accent.DEFAULT} strokeWidth={2} style={{ flexShrink: 0 }} />
+            <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{
+                    fontSize: 10,
+                    textTransform: 'uppercase',
+                    letterSpacing: tokens.typography.letterSpacing.wide,
+                    color: tokens.colors.text.tertiary,
+                    marginBottom: 3,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                }}>
+                    Ausblick nächste Woche
+                    {preview.phase && <span style={{ color: tokens.colors.accent.DEFAULT, fontWeight: 700 }}>· {preview.phase}</span>}
+                    {preview.targetKm != null && <span style={{ color: tokens.colors.accent.DEFAULT, fontWeight: 700 }}>· ~{preview.targetKm} km</span>}
+                </div>
+                <p style={{ margin: 0, fontSize: 13, color: tokens.colors.text.secondary, lineHeight: 1.5 }}>
+                    {preview.focus}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+const RUN_DAY_OPTIONS = [3, 4, 5];
+
+function FrequencyModal({ reco, onClose, onConfirm }) {
+    const { tokens } = useTheme();
+    const recommended = reco?.recommendedRunDays || 3;
+    const [runDays, setRunDays] = useState(recommended);
+
+    return (
+        <>
+            <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={onClose}
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', zIndex: 950 }}
+            />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                style={{
+                    position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+                    width: 420, maxWidth: '92vw',
+                    ...tokens.glass.modal,
+                    padding: 22, zIndex: 951,
+                }}
+            >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <div style={{ fontSize: tokens.typography.fontSize.lg, fontWeight: 700, color: tokens.colors.text.primary }}>
+                        Wie oft kannst du diese Woche laufen?
+                    </div>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tokens.colors.text.secondary, padding: 4 }}>
+                        <X size={18} />
+                    </button>
+                </div>
+
+                {reco && (
+                    <p style={{ margin: '0 0 16px', fontSize: 13, color: tokens.colors.text.secondary, lineHeight: 1.55 }}>
+                        Coach-Empfehlung: <strong style={{ color: tokens.colors.accent.DEFAULT }}>{recommended} Lauftage</strong>
+                        {reco.lastWeeklyKm ? ` (Vorwoche ~${reco.lastWeeklyKm} km` : ' (noch kein Vorwert'}
+                        {reco.phase ? ` · Phase ${reco.phase}` : ''}
+                        {reco.weeksToMarathon != null ? ` · T-${reco.weeksToMarathon} Wo` : ''})
+                        . Ab ~50 km/Woche lohnt sich ein 4. Lauf, um die Einzelläufe kurz zu halten.
+                    </p>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+                    {RUN_DAY_OPTIONS.map((n) => {
+                        const active = runDays === n;
+                        const isReco = n === recommended;
+                        return (
+                            <button
+                                key={n}
+                                onClick={() => setRunDays(n)}
+                                style={{
+                                    flex: 1,
+                                    padding: '14px 0',
+                                    borderRadius: tokens.radius.md,
+                                    border: `1.5px solid ${active ? tokens.colors.accent.DEFAULT : tokens.colors.border.glass}`,
+                                    background: active ? `${tokens.colors.accent.DEFAULT}18` : tokens.colors.surface.glass,
+                                    color: active ? tokens.colors.accent.DEFAULT : tokens.colors.text.secondary,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                    position: 'relative',
+                                }}
+                            >
+                                <span style={{ fontFamily: tokens.typography.fontFamily.display, fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{n}</span>
+                                <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Läufe</span>
+                                {isReco && (
+                                    <span style={{
+                                        position: 'absolute', top: -8, right: -6,
+                                        fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+                                        background: tokens.colors.accent.DEFAULT, color: '#fff',
+                                        padding: '2px 5px', borderRadius: tokens.radius.sm,
+                                    }}>Tipp</span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <button onClick={() => onConfirm(runDays)} style={{
+                    ...tokens.glass.buttonAccent, width: '100%',
+                    padding: '11px 14px', cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}>
+                    <Sparkles size={14} strokeWidth={2.5} />
+                    Plan mit {runDays} Lauftagen generieren
+                    <ArrowRight size={14} strokeWidth={2.5} />
+                </button>
+            </motion.div>
+        </>
     );
 }
 
