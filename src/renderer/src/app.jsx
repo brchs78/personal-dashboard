@@ -377,7 +377,7 @@ export default function App() {
             {/* SETTINGS OVERLAY */}
             {showSettings && (
                 <div onClick={() => setShowSettings(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
-                    <div onClick={e => e.stopPropagation()} style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-primary)", borderRadius: "var(--border-radius-lg)", padding: "1.25rem", width: 340, maxWidth: "90%" }}>
+                    <div onClick={e => e.stopPropagation()} style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-primary)", borderRadius: "var(--border-radius-lg)", padding: "1.25rem", width: 340, maxWidth: "90%", maxHeight: "calc(100vh - 40px)", overflowY: "auto" }}>
                         <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}>Anthropic API Key</p>
                         <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "0 0 12px", lineHeight: 1.5 }}>Damit die KI-Features funktionieren. Bekommst du auf console.anthropic.com</p>
                         <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-ant-..." style={{ ...INP, marginBottom: 12, fontFamily: "var(--font-mono)", fontSize: 12 }} />
