@@ -2,7 +2,7 @@
 // Generiert via Anthropic API in main-process auf Basis von Health + Strava.
 
 import { useState } from 'react';
-import { Sparkles, RefreshCw, CheckCircle2, Circle, Calendar, Flame, Moon, Pencil, X, CalendarClock, ArrowRight } from 'lucide-react';
+import { Sparkles, RefreshCw, CheckCircle2, Circle, Calendar, Flame, Moon, Pencil, X, CalendarClock, ArrowRight, AlertTriangle, BatteryLow } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTrainingPlan } from '../hooks/useTrainingPlan';
 import { useTheme } from "../hooks/useTheme.jsx";
@@ -45,7 +45,9 @@ export default function TrainingPlan() {
             {plan && (
                 <>
                     <WeekSummary plan={plan} done={done} />
-                    {plan.coachNote && <CoachNote note={plan.coachNote} />}
+                    {plan.deloadEnforced && <DeloadBadge />}
+            {plan.phaseNote && <PhaseNoteBadge note={plan.phaseNote} />}
+            {plan.coachNote && <CoachNote note={plan.coachNote} />}
                     <DaysList plan={plan} done={done} onToggle={toggleDone} onEdit={setEditing} />
                     {plan.nextWeekPreview && <NextWeekPreview preview={plan.nextWeekPreview} />}
                     <PhaseExplainer phase={plan.phase} />
@@ -83,6 +85,45 @@ function CoachNote({ note }) {
         <div style={{ ...tokens.glass.card, padding: tokens.spacing.md, display: 'flex', gap: tokens.spacing.sm, alignItems: 'flex-start', borderLeft: `3px solid ${tokens.colors.accent.secondary}` }}>
             <Sparkles size={16} color={tokens.colors.accent.secondary} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
             <p style={{ margin: 0, fontSize: 13, color: tokens.colors.text.secondary, lineHeight: 1.55, fontStyle: 'italic' }}>
+                {note}
+            </p>
+        </div>
+    );
+}
+
+function DeloadBadge() {
+    const { tokens } = useTheme();
+    return (
+        <div style={{
+            ...tokens.glass.card,
+            padding: `${tokens.spacing.sm} ${tokens.spacing.md}`,
+            display: 'flex', gap: tokens.spacing.sm, alignItems: 'center',
+            borderLeft: `3px solid ${tokens.colors.tab.calendar}`,
+            background: `${tokens.colors.tab.calendar}10`,
+        }}>
+            <BatteryLow size={15} color={tokens.colors.tab.calendar} strokeWidth={2.5} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: tokens.colors.tab.calendar }}>
+                Entlastungswoche erzwungen
+            </span>
+            <span style={{ fontSize: 12, color: tokens.colors.text.secondary }}>
+                — 3 Steigerungswochen in Folge. Volumen −20% für Regeneration.
+            </span>
+        </div>
+    );
+}
+
+function PhaseNoteBadge({ note }) {
+    const { tokens } = useTheme();
+    return (
+        <div style={{
+            ...tokens.glass.card,
+            padding: `${tokens.spacing.sm} ${tokens.spacing.md}`,
+            display: 'flex', gap: tokens.spacing.sm, alignItems: 'flex-start',
+            borderLeft: `3px solid ${tokens.colors.status.warning || tokens.colors.tab.body}`,
+            background: `${tokens.colors.tab.body}10`,
+        }}>
+            <AlertTriangle size={15} color={tokens.colors.tab.body} strokeWidth={2.5} style={{ flexShrink: 0, marginTop: 1 }} />
+            <p style={{ margin: 0, fontSize: 12, color: tokens.colors.text.secondary, lineHeight: 1.5 }}>
                 {note}
             </p>
         </div>

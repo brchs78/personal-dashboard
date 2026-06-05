@@ -41,6 +41,15 @@ const HEALTH_CONSTRAINTS = `GESUNDHEIT & BELASTUNGS-STEUERUNG:
 - Intensität (Threshold/Intervalle) nur in Phase Build/Peak — in Base strikt Z1-2.
 - Bei Erschöpfungssignalen lieber einen Tag mehr Easy als zu früh pushen.`;
 
+// Fix 3 — Hockey als Qualitätsbelastung explizit rechnen.
+const HOCKEY_LOAD = `HOCKEY-LAST (zwingend berücksichtigen):
+- Di + Do Hockey = 2× hochintensive anaerobe Einheiten/Woche — diese zählen als Quality-Tage.
+- Maximale harte Tage/Woche: 3. Hockey belegt bereits 2.
+  → In Phase Build: nur 1× Lauf-Quality (nicht 2×), weil Hockey den zweiten Quality-Reiz liefert.
+  → In Phase Base: Hockey = einzige Intensität der Woche. Läufe STRIKT Z2.
+- Mo (nach Do-Hockey): Recovery-Tendenz — Easy eher kürzer/locker.
+- Mi (nach Di-Hockey): angepasstes Easy, keine Zusatz-Belastung.`;
+
 function summarizeHealth(summary) {
     if (!summary?.latest) return 'KEINE HEALTH-DATEN VERFÜGBAR.';
     const l = summary.latest;
@@ -107,6 +116,115 @@ LETZTE 10 LÄUFE:
 ${recent}`;
 }
 
+// Fix 5 — Tatsächlich absolvierte km aus Strava für eine Woche (IST, nicht Soll).
+function mondayNWeeksAgo(n) {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff - n * 7);
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString().slice(0, 10);
+}
+
+function actualWeekKm(weekStartISO, activities) {
+    if (!activities || activities.length === 0) return 0;
+    const start = new Date(weekStartISO).getTime();
+    const end = start + 7 * 86400000;
+    return activities
+        .filter(a => a.type === 'Run')
+        .filter(a => {
+            const t = new Date(a.start_date_local).getTime();
+            return t >= start && t < end;
+        })
+        .reduce((s, a) => s + a.distance / 1000, 0);
+}
+
+// Absolvierte km der Vorwoche — Strava-Ist, Fallback auf erledigte Plan-Tage.
+function prevActualKm(prevPlan, done, activities) {
+    if (prevPlan?.weekStart && activities?.length > 0) {
+        const stravaKm = actualWeekKm(prevPlan.weekStart, activities);
+        if (stravaKm > 0) return stravaKm;
+    }
+    // Fallback: nur erledigte Tage des letzten Plans summieren
+    if (!prevPlan?.days) return 0;
+    return prevPlan.days
+        .filter(d => done?.[d.date])
+        .reduce((s, d) => s + (d.distanceKm || 0), 0);
+}
+
+// Fix 1 — Readiness-Gate: Kalender gibt Obergrenze, Fitness entscheidet ob erreichbar.
+function computeFitness(activities, history, hrvTrend) {
+    // Strava-Ist-Volumen der letzten 3 Wochen
+    const weeklyKm = [0, 1, 2].map(n => actualWeekKm(mondayNWeeksAgo(n), activities));
+    const recentWeeklyKm = weeklyKm.find(km => km > 0) || 0;
+
+    // Stabile Wochen: wie viele der letzten 3 Wochen ≥30 km?
+    const stableWeeks = weeklyKm.filter(km => km >= 30).length;
+
+    // Längster Lauf in letzten 4 Wochen
+    const cutoff = Date.now() - 28 * 86400000;
+    const lastLongRunKm = (activities || [])
+        .filter(a => a.type === 'Run' && new Date(a.start_date_local).getTime() > cutoff)
+        .reduce((m, a) => Math.max(m, a.distance / 1000), 0);
+
+    // HRV-Richtung aus Trend
+    let hrvDir = 'stable';
+    if (hrvTrend && hrvTrend.length >= 2) {
+        const last7 = hrvTrend.slice(-7);
+        const first = last7[0].value;
+        const last = last7[last7.length - 1].value;
+        hrvDir = last < first - 2 ? 'falling' : last > first + 2 ? 'rising' : 'stable';
+    }
+
+    return { recentWeeklyKm, stableWeeks, lastLongRunKm, hrvDir };
+}
+
+function gatePhase(calendarPhase, fitness) {
+    if (calendarPhase === 'Base' || calendarPhase === 'Taper') {
+        return { phase: calendarPhase, phaseNote: null };
+    }
+
+    // Voraussetzungen für Build: 3 stabile Wochen ≥30 km + Long Run ≥18 km + HRV nicht fallend
+    const readyForBuild = fitness.stableWeeks >= 3
+        && fitness.recentWeeklyKm >= 45
+        && fitness.lastLongRunKm >= 18
+        && fitness.hrvDir !== 'falling';
+
+    if (!readyForBuild) {
+        return {
+            phase: 'Base',
+            phaseNote: `Kalender sagt ${calendarPhase}, aber Readiness-Check nicht erfüllt — Basis-km: ${fitness.recentWeeklyKm.toFixed(0)} km/Wo, Long Run: ${fitness.lastLongRunKm.toFixed(0)} km, stabile Wochen: ${fitness.stableWeeks}/3. Bleibe in Base bis Voraussetzungen erfüllt.`,
+        };
+    }
+
+    // Voraussetzungen für Peak: ≥70 km/Wo über mind. 2 Wochen
+    if (calendarPhase === 'Peak') {
+        const readyForPeak = fitness.stableWeeks >= 2 && fitness.recentWeeklyKm >= 70;
+        if (!readyForPeak) {
+            return {
+                phase: 'Build',
+                phaseNote: `Kalender sagt Peak, aber Volumen noch nicht bei Peak-Niveau (${fitness.recentWeeklyKm.toFixed(0)} km, Ziel ≥70 km). Verbleibe in Build.`,
+            };
+        }
+    }
+
+    return { phase: calendarPhase, phaseNote: null };
+}
+
+// Fix 2 — Deload deterministisch zählen, nicht dem LLM überlassen.
+function computeDeload(history, actualKmPrevWeek) {
+    // Aufeinanderfolgende Nicht-Deload-Wochen rückwärts zählen
+    const recent = [...history].reverse().slice(0, 4);
+    let streak = 0;
+    for (const week of recent) {
+        if (week.isDeload) break;
+        streak++;
+    }
+    const forceDeload = streak >= 3;
+    const targetKm = forceDeload ? Math.round((actualKmPrevWeek || 30) * 0.8) : null;
+    return { forceDeload, streak, targetKm };
+}
+
 // #1 — Datums-getriebener Phasenwechsel: Phase ergibt sich aus Wochen bis Marathon.
 function weeksToMarathon(weekStart) {
     const start = new Date(weekStart);
@@ -163,10 +281,15 @@ function summarizeHistory(history) {
     return `VOLUMEN-VERLAUF (letzte Wochen, für +10%- und 3:1-Deload-Regel):\n${rows.join('\n')}`;
 }
 
-function buildPrompt({ health, hrvTrend, activities, weekStart, prevPlan, history, done, availableRunDays, phase, recommendedRunDays }) {
+function buildPrompt({ health, hrvTrend, activities, weekStart, prevPlan, history, done,
+    availableRunDays, phase, phaseNote, recommendedRunDays, deload, actualPrevKm }) {
     const daysToMarathon = Math.max(0, Math.round((new Date(MARATHON_DATE) - new Date(weekStart)) / 86400000));
-    const prevTotal = planVolume(prevPlan);
     const runDays = availableRunDays || recommendedRunDays;
+
+    // Fix 2 — Deload-Direktive als nicht-verhandelbare Anweisung
+    const deloadDirective = deload.forceDeload
+        ? `\n⚠️ ENTLASTUNGSWOCHE PFLICHT (${deload.streak} Steigerungswochen in Folge): Ziel-km = ${deload.targetKm} km (-20%). isDeload MUSS true sein. Kein Threshold, kein Quality-Block.`
+        : '';
 
     return `Du bist Marathon-Trainer für Ole.
 
@@ -174,10 +297,12 @@ ATHLET: Ole, 193cm, 72kg, VWL-Student LMU München.
 ZIEL: Marathon ${MARATHON_DATE} in ${TARGET_TIME} (Pace ${TARGET_PACE}).
 WOCHENSTART ${weekStart}: T-${daysToMarathon} Tage → ${weeksToMarathon(weekStart)} Wochen bis Marathon.
 
-AKTUELLE PHASE: ${phase}
-${phaseInstruction(phase)}
+AKTUELLE PHASE: ${phase}${phaseNote ? `\n⚠️ PHASEN-HINWEIS: ${phaseNote}` : ''}
+${phaseInstruction(phase)}${deloadDirective}
 
 ${HEALTH_CONSTRAINTS}
+
+${HOCKEY_LOAD}
 
 ${COACH_PRINCIPLES}
 
@@ -185,29 +310,29 @@ ${PHASE_GUIDE}
 
 ${WEEK_FRAME}
 
-VERFÜGBARKEIT DIESE WOCHE: Ole kann an ${runDays} Tagen laufen (Empfehlung des Coaches wäre ${recommendedRunDays}).
+VERFÜGBARKEIT DIESE WOCHE: Ole kann an ${runDays} Tagen laufen (Coach-Empfehlung: ${recommendedRunDays}).
 Verteile das Wochenvolumen auf GENAU ${runDays} Lauftage. Bei ≤3 → Mo/Mi/Sa. Bei 4 → + kurzer So-Recovery-Run (Z1). Bei 5 → zusätzlich einen Lauftag splitten. Di/Do Hockey + Fr Rad bleiben immer frei.
 
 AKTUELLER RECOVERY-STATUS:
 ${summarizeHealth(health)}
 ${summarizeHrvTrend(hrvTrend)}
 
-PLAN-GEDÄCHTNIS:
+PLAN-GEDÄCHTNIS (SOLL — was geplant war):
 ${summarizePrevPlan(prevPlan, done)}
 ${summarizeHistory(history)}
 
-STRAVA-HISTORIE:
+STRAVA-HISTORIE (IST — was tatsächlich gelaufen wurde):
 ${summarizeStrava(activities)}
 
-PROGRESSION (datengetrieben):
-- Basiere das Volumen auf der VORWOCHE (${prevTotal > 0 ? prevTotal.toFixed(0) + ' km' : 'kein Vorwert → Strava-Volumen nutzen'}), nicht auf einem festen Startwert.
-- Steigere max. +10% vs. Vorwoche. Wenn der Volumen-Verlauf 3 Steigerungswochen in Folge zeigt → DIESE Woche Entlastung (-20%).
-- Long Run ≤ 33% des Wochenvolumens.
+PROGRESSION (Fix 5 — immer auf IST-Basis, niemals auf Soll-Basis):
+- Progressionsbasis = tatsächlich gelaufene km laut Strava-IST der Vorwoche: ${actualPrevKm > 0 ? actualPrevKm.toFixed(0) + ' km' : 'kein Strava-Wert → Vorwoche-Plan als Fallback'}.
+- NICHT auf Soll-Plan-km basieren — nur auf was Ole wirklich absolviert hat.
+- Steigere max. +10% vs. IST-Basis. Long Run ≤ 33% des Wochenvolumens.
 - Bei niedriger HRV / schlechtem Schlaf → Quality zu Easy downgraden.
 
 AUFGABE:
 1. Erstelle die Trainingswoche ab ${weekStart} (Mo-So, 7 Tage) für Phase ${phase}.
-2. Gib zusätzlich einen kurzen Ausblick auf die NÄCHSTE Woche (Ziel-km + Fokus), damit Ole die Richtung sieht.
+2. Gib einen kurzen Ausblick auf die NÄCHSTE Woche (Ziel-km + Fokus).
 
 ANTWORTE NUR ALS VALIDES JSON (keine Code-Fences, kein Text drumherum) NACH DIESEM SCHEMA:
 {
@@ -217,7 +342,8 @@ ANTWORTE NUR ALS VALIDES JSON (keine Code-Fences, kein Text drumherum) NACH DIES
   "runDays": ${runDays},
   "isDeload": <true wenn Entlastungswoche, sonst false>,
   "summary": "<1-Satz-Wochenziel auf Deutsch>",
-  "coachNote": "<1-2 Sätze: warum dieses Volumen/diese Frequenz, ggf. Kommentar zur gewählten Lauftage-Anzahl vs. Empfehlung>",
+  "coachNote": "<1-2 Sätze: Begründung Volumen/Frequenz, ggf. Kommentar Lauftage vs. Empfehlung>",
+  "phaseNote": ${phaseNote ? `"${phaseNote.replace(/"/g, "'")}"` : 'null'},
   "days": [
     {
       "date": "YYYY-MM-DD",
@@ -293,19 +419,43 @@ function thisMonday() {
 async function generatePlan({ apiKey, health, hrvTrend, activities, weekStart, prevPlan, history, done, availableRunDays }) {
     if (!apiKey) throw new Error('missing_api_key');
     const start = weekStart || thisMonday();
-    const phase = computePhase(start);
-    const recommendedRunDays = recommendRunDays(planVolume(prevPlan));
+
+    // Fix 5 — IST-Basis: echte absolvierte km der Vorwoche
+    const actualPrevKm = prevActualKm(prevPlan, done, activities);
+
+    // Fix 1 — Readiness-Gate: Kalender gibt Obergrenze, Fitness entscheidet
+    const calendarPhase = computePhase(start);
+    const fitness = computeFitness(activities, history, hrvTrend);
+    const { phase, phaseNote } = gatePhase(calendarPhase, fitness);
+
+    // Fix 2 — Deload deterministisch berechnen
+    const deload = computeDeload(history, actualPrevKm);
+
+    // Fix 5 — Empfehlung auf IST-Basis
+    const recommendedRunDays = recommendRunDays(actualPrevKm);
+
     const prompt = buildPrompt({
         health, hrvTrend, activities, weekStart: start,
         prevPlan, history, done, availableRunDays,
-        phase, recommendedRunDays,
+        phase, phaseNote, recommendedRunDays, deload, actualPrevKm,
     });
     const raw = await callAnthropic({ apiKey, prompt });
     const plan = extractJson(raw);
-    plan.phase = phase; // Phase ist datums-autoritativ, nicht vom LLM überschreibbar
+
+    // Phase ist autoritativ (Fix 1), Deload wird erzwungen (Fix 2)
+    plan.phase = phase;
+    plan.phaseNote = phaseNote || plan.phaseNote || null;
+    if (deload.forceDeload) {
+        plan.isDeload = true;
+        plan.deloadEnforced = true; // Flag für UI
+    }
+    plan.actualPrevKm = Math.round(actualPrevKm);
     plan.generatedAt = new Date().toISOString();
     plan.model = MODEL;
     return plan;
 }
 
-module.exports = { generatePlan, computePhase, recommendRunDays, weeksToMarathon, thisMonday, nextMonday, MARATHON_DATE, TARGET_TIME };
+module.exports = {
+    generatePlan, computePhase, gatePhase, computeDeload, recommendRunDays,
+    actualWeekKm, weeksToMarathon, thisMonday, nextMonday, MARATHON_DATE, TARGET_TIME,
+};
