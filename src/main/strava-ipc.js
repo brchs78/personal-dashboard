@@ -62,7 +62,7 @@ function init(getWindow) {
         };
     });
 
-    ipcMain.handle('strava:sync', async (_e, { perPage = 30 } = {}) => {
+    ipcMain.handle('strava:sync', async (_e, { perPage = 100 } = {}) => {
         const creds = getCreds();
         const activities = await client.listActivities(creds, { perPage });
         const cache = {

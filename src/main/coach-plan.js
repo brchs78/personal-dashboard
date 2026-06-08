@@ -19,11 +19,35 @@ const WEEK_FRAME = `WOCHEN-RAHMEN (fest, nicht ändern):
 
 WICHTIG: Di und Do sind IMMER Hockey. Niemals dort einen Lauf einplanen. So ist IMMER reiner Rest/Yoga-Tag. Die Lauf-km verteilen sich ausschließlich auf Mo, Mi, Sa.`;
 
-const PHASE_GUIDE = `PHASEN-PLAN (heute = Phase 1 Base-Building):
-- Phase 1 (Base, jetzt-4 Wochen): NUR Z2/Easy + Long Run. KEINE Intervalle. Volumen 25→60 km/Woche (nur Lauftage: Mo, Mi, Sa, So).
-- Phase 2 (Build): 1× Threshold + 1× Marathon-Pace-Block, 70-80 km/Woche.
-- Phase 3 (Peak): 2× Quality, Long Runs >32 km, 80-90 km/Woche Peak.
-- Phase 4 (Taper, letzte 3 Wochen): -40% Volumen, Intensität halten.`;
+const PHASE_GUIDE = `PERIODISIERUNG (Referenz, gesamter Zyklus):
+- Base: NUR Z2/Easy + Long Run. KEINE Intervalle. Volumen 25→60 km/Woche.
+- Build: 1× Threshold + 1× Marathon-Pace-Block, 70-80 km/Woche.
+- Peak: 2× Quality, Long Runs >32 km, 80-90 km/Woche Peak.
+- Taper (letzte 3 Wochen): -40% Volumen, Intensität halten.`;
+
+// Aktive Phase aus Resttagen bis zum Marathon ableiten — NICHT statisch.
+function derivePhase(daysToMarathon) {
+    if (daysToMarathon <= 21) return {
+        phase: 'Taper',
+        focus: 'Volumen -40%, Intensität halten. Frische aufbauen, kein neues Volumen.',
+        diagnosis: 'Taper-Phase: Erholung priorisieren, Schärfe halten, Beine frisch bekommen. Kurze MP-Touches, kein Volumen-Aufbau mehr.',
+    };
+    if (daysToMarathon <= 56) return {
+        phase: 'Peak',
+        focus: '2× Quality/Woche, Long Runs >32 km, 80-90 km Peak-Volumen.',
+        diagnosis: 'Peak-Phase: Marathon-spezifische Härte. Long Runs mit Marathon-Pace-Blöcken, 2× Quality, höchstes Volumen des Zyklus.',
+    };
+    if (daysToMarathon <= 112) return {
+        phase: 'Build',
+        focus: '1× Threshold + 1× Marathon-Pace-Block, 70-80 km/Woche.',
+        diagnosis: 'Build-Phase: Schwelle + Marathon-Pace einführen. Volumen weiter steigern, jetzt mit gezielter Qualität — NICHT mehr reines Base-Building.',
+    };
+    return {
+        phase: 'Base',
+        focus: 'NUR Z2/Easy + Long Run, keine Intervalle. Volumen 25→60 km/Woche.',
+        diagnosis: 'Base-Phase: Aerobe Basis bauen. Volumen vor Tempo, Mitochondrien-Aufbau. Noch keine Intervalle.',
+    };
+}
 
 const COACH_PRINCIPLES = `COACH-PRINZIPIEN:
 - 80/20 Polarized: 80% Z2 Easy, 20% Quality.
@@ -33,12 +57,9 @@ const COACH_PRINCIPLES = `COACH-PRINZIPIEN:
 - Easy-Pace strikt 5:15-5:40/km (Z2, 130-150 bpm). Wenn schneller → BREMSEN.
 - Marathon-Pace = 4:30/km (Sub-3:10). Threshold = 4:00-4:10/km. Intervalle = 3:45-3:55/km.`;
 
-const HEALTH_CONSTRAINTS = `AKTUELLE GESUNDHEITS-EINSCHRÄNKUNGEN (zwingend beachten):
-- Post-Weisheitszahn-OP + Antibiotika: Immunsystem unter Stress, Heilungsprozess aktiv.
-- Erlaubt: Zone 1-2 Laufen (130-150 bpm), Hockey, Radfahren, Yoga, leichtes Gym.
-- VERBOTEN: Schwimmen/Pool, schweres Gewichtheben, maximale Intensität (Z5, Intervalle <4min/km).
-- Antibiotika reduzieren Belastbarkeit leicht — bei Erschöpfung sofort Intensität senken.
-- Kein Druck: Heilung hat Vorrang. Lieber einen Tag mehr Easy als einen Tag zu früh pushen.`;
+const HEALTH_CONSTRAINTS = `GESUNDHEIT: Keine akuten Einschränkungen — volle Belastbarkeit.
+- Steuerung rein über Recovery-Status (HRV/Schlaf/RHR) unten: niedrige HRV oder schlechter Schlaf → Quality zu Easy downgraden.
+- Bei Krankheits-/Erschöpfungssymptomen sofort Intensität senken.`;
 
 function summarizeHealth(summary) {
     if (!summary?.latest) return 'KEINE HEALTH-DATEN VERFÜGBAR.';
@@ -61,7 +82,8 @@ function summarizeHealth(summary) {
 
 function summarizeHrvTrend(trend) {
     if (!trend || trend.length === 0) return '';
-    const last7 = trend.slice(-7);
+    const sorted = [...trend].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const last7 = sorted.slice(-7);
     if (last7.length < 2) return '';
     const avg = last7.reduce((a, b) => a + b.value, 0) / last7.length;
     const first = last7[0].value;
@@ -70,20 +92,27 @@ function summarizeHrvTrend(trend) {
     return `HRV-Trend 7d: Ø ${avg.toFixed(0)} ms, ${dir} (${first}→${last})`;
 }
 
+function fmtPace(mps) {
+    if (!mps || mps <= 0) return '–';
+    const sec = Math.round(1000 / mps);
+    return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+}
+
 function summarizeStrava(activities) {
     if (!activities || activities.length === 0) return 'KEINE STRAVA-AKTIVITÄTEN VERFÜGBAR.';
-    const runs = activities.filter(a => a.type === 'Run').slice(0, 20);
+    const runs = activities.filter(a => a.type === 'Run');
     if (runs.length === 0) return 'KEINE LÄUFE IN STRAVA.';
 
-    // Weekly mileage last 4 weeks
-    const now = Date.now();
+    // Echte Kalenderwochen (Mo-So). Index 0 = laufende (unvollständige) Woche,
+    // 1..4 = abgeschlossene Wochen davor.
+    const thisWeekMon = mondayOf(new Date()).getTime();
     const week = 7 * 86400000;
-    const buckets = [0, 0, 0, 0];
-    const counts = [0, 0, 0, 0];
+    const buckets = [0, 0, 0, 0, 0];
+    const counts = [0, 0, 0, 0, 0];
     for (const r of runs) {
-        const age = now - new Date(r.start_date_local).getTime();
-        const w = Math.floor(age / week);
-        if (w >= 0 && w < 4) {
+        const runMon = mondayOf(new Date(r.start_date_local)).getTime();
+        const w = Math.round((thisWeekMon - runMon) / week);
+        if (w >= 0 && w < 5) {
             buckets[w] += r.distance / 1000;
             counts[w]++;
         }
@@ -91,16 +120,19 @@ function summarizeStrava(activities) {
 
     const recent = runs.slice(0, 10).map(r => {
         const km = (r.distance / 1000).toFixed(1);
-        const mps = r.average_speed || 0;
-        const pace = mps > 0 ? `${Math.floor(1000 / mps / 60)}:${String(Math.round((1000 / mps) % 60)).padStart(2, '0')}` : '–';
         const hr = r.average_heartrate ? `HR ${Math.round(r.average_heartrate)}` : '';
-        return `  ${r.start_date_local.slice(0, 10)}  ${km} km @ ${pace}/km ${hr}`;
+        return `  ${r.start_date_local.slice(0, 10)}  ${km} km @ ${fmtPace(r.average_speed)}/km ${hr}`;
     }).join('\n');
 
-    const weekly = buckets.map((km, i) => `  -${i}w: ${km.toFixed(1)} km (${counts[i]} Läufe)`).join('\n');
+    const completed = [1, 2, 3, 4]
+        .map(i => `  -${i}w (abgeschlossen): ${buckets[i].toFixed(1)} km (${counts[i]} Läufe)`)
+        .join('\n');
 
-    return `WOCHENVOLUMEN (letzte 4 Wochen):
-${weekly}
+    return `WOCHENVOLUMEN (Kalenderwochen Mo-So):
+  laufende Woche: ${buckets[0].toFixed(1)} km (${counts[0]} Läufe) — UNVOLLSTÄNDIG, NICHT als +10%-Basis nutzen
+${completed}
+
++10%-BASIS = letzte abgeschlossene Woche: ${buckets[1].toFixed(1)} km
 
 LETZTE 10 LÄUFE:
 ${recent}`;
@@ -108,6 +140,7 @@ ${recent}`;
 
 function buildPrompt({ health, hrvTrend, activities, weekStart }) {
     const daysToMarathon = Math.max(0, Math.round((new Date(MARATHON_DATE) - new Date()) / 86400000));
+    const { phase, focus, diagnosis } = derivePhase(daysToMarathon);
 
     return `Du bist Marathon-Trainer für Ole.
 
@@ -121,6 +154,9 @@ ${COACH_PRINCIPLES}
 
 ${PHASE_GUIDE}
 
+AKTIVE PHASE: ${phase} (T-${daysToMarathon} Tage bis Marathon)
+PHASEN-FOKUS: ${focus}
+
 ${WEEK_FRAME}
 
 AKTUELLER RECOVERY-STATUS:
@@ -130,7 +166,7 @@ ${summarizeHrvTrend(hrvTrend)}
 TRAININGSHISTORIE:
 ${summarizeStrava(activities)}
 
-DIAGNOSE: Volumen-Defizit. Athlet braucht Base-Building, NICHT Speed. Erstelle Phase-1-Plan.
+DIAGNOSE: ${diagnosis}
 
 AUFGABE:
 Erstelle die Trainingswoche ab ${weekStart} (Mo-So, 7 Tage).
@@ -192,22 +228,54 @@ function extractJson(text) {
     throw new Error('no_json_in_response');
 }
 
-function nextMonday() {
-    const d = new Date();
-    const day = d.getDay();
-    const diff = day === 0 ? 1 : (8 - day);
-    d.setDate(d.getDate() + diff);
-    d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 10);
+// Lokales Datum als YYYY-MM-DD — NICHT toISOString (das wäre UTC und kippt
+// in DE-Zeitzone die lokale Mitternacht auf den Vortag).
+function toLocalISO(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
 }
 
-function thisMonday() {
-    const d = new Date();
+// Montag (lokal, 00:00) der Woche, in der `date` liegt.
+function mondayOf(date) {
+    const d = new Date(date);
     const day = d.getDay();
     const diff = day === 0 ? -6 : 1 - day;
     d.setDate(d.getDate() + diff);
     d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 10);
+    return d;
+}
+
+function nextMonday() {
+    const d = mondayOf(new Date());
+    d.setDate(d.getDate() + 7);
+    return toLocalISO(d);
+}
+
+function thisMonday() {
+    return toLocalISO(mondayOf(new Date()));
+}
+
+const VALID_PHASES = ['Base', 'Build', 'Peak', 'Taper'];
+
+function validatePlan(plan) {
+    if (!plan || typeof plan !== 'object') throw new Error('plan_invalid: kein Objekt');
+    if (!Array.isArray(plan.days) || plan.days.length !== 7) {
+        throw new Error(`plan_invalid: 7 Tage erwartet, ${plan.days?.length ?? 0} erhalten`);
+    }
+    if (typeof plan.weeklyKm !== 'number' || !isFinite(plan.weeklyKm)) {
+        throw new Error('plan_invalid: weeklyKm ist keine Zahl');
+    }
+    if (!VALID_PHASES.includes(plan.phase)) {
+        throw new Error(`plan_invalid: unbekannte phase "${plan.phase}"`);
+    }
+    for (const d of plan.days) {
+        if (!d || !d.date || !d.dayLabel || !d.type) {
+            throw new Error(`plan_invalid: unvollständiger Tag ${JSON.stringify(d).slice(0, 80)}`);
+        }
+    }
+    return plan;
 }
 
 async function generatePlan({ apiKey, health, hrvTrend, activities, weekStart }) {
@@ -215,7 +283,7 @@ async function generatePlan({ apiKey, health, hrvTrend, activities, weekStart })
     const start = weekStart || thisMonday();
     const prompt = buildPrompt({ health, hrvTrend, activities, weekStart: start });
     const raw = await callAnthropic({ apiKey, prompt });
-    const plan = extractJson(raw);
+    const plan = validatePlan(extractJson(raw));
     plan.generatedAt = new Date().toISOString();
     plan.model = MODEL;
     return plan;
