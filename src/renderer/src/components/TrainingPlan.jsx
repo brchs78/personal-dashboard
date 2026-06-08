@@ -122,8 +122,8 @@ function EmptyState({ onGenerate }) {
                 Noch kein Plan
             </h3>
             <p style={{ margin: 0, fontSize: tokens.typography.fontSize.sm, color: tokens.colors.text.secondary, lineHeight: 1.6 }}>
-                Die KI analysiert deine letzten Strava-Läufe + Apple-Health-Recovery (HRV, RHR, Schlaf)
-                und baut eine Phase-1-Base-Building-Woche. Fokus: Volumen statt Speed.
+                Die KI analysiert deine letzten Strava-Läufe + Recovery (HRV, RHR, Schlaf)
+                und baut eine passende Trainingswoche für die aktuelle Phase. Fokus: Volumen statt Speed.
             </p>
             <button onClick={onGenerate} style={{
                 padding: '10px 18px',
