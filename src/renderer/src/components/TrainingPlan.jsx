@@ -27,12 +27,20 @@ export default function TrainingPlan() {
     const TYPE_COLOR = getTypeColor(tokens);
     const { plan, done, busy, error, generate, toggleDone, updateDay } = useTrainingPlan();
     const [editing, setEditing] = useState(null); // day object or null
+    const [hockey, setHockey] = useState(() => {
+        try { const v = parseInt(localStorage.getItem('ole:hockey-per-week'), 10); return isFinite(v) ? v : 2; }
+        catch { return 2; }
+    });
+    const changeHockey = (v) => {
+        setHockey(v);
+        try { localStorage.setItem('ole:hockey-per-week', String(v)); } catch { /* ignore */ }
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.lg, padding: tokens.spacing.lg }}>
-            <Header plan={plan} busy={busy} onGenerate={() => generate()} />
+            <Header plan={plan} busy={busy} hockey={hockey} onHockey={changeHockey} onGenerate={() => generate(undefined, hockey)} />
             {error && <ErrorCard message={error} />}
-            {!plan && !busy && <EmptyState onGenerate={() => generate()} />}
+            {!plan && !busy && <EmptyState onGenerate={() => generate(undefined, hockey)} />}
             {busy && <BusyCard />}
             {plan && (
                 <>
@@ -57,7 +65,7 @@ export default function TrainingPlan() {
     );
 }
 
-function Header({ plan, busy, onGenerate }) {
+function Header({ plan, busy, hockey, onHockey, onGenerate }) {
     const { tokens } = useTheme();
     const TYPE_COLOR = getTypeColor(tokens);
     return (
@@ -81,33 +89,57 @@ function Header({ plan, busy, onGenerate }) {
                     KI-generiert · Marathon 11.10.2026 · Sub-3:10
                 </p>
             </div>
-            <button
-                type="button"
-                onClick={onGenerate}
-                disabled={busy}
-                style={{
-                    padding: '10px 18px',
-                    fontSize: tokens.typography.fontSize.sm,
-                    fontWeight: tokens.typography.fontWeight.semibold,
-                    letterSpacing: tokens.typography.letterSpacing.wide,
-                    textTransform: 'uppercase',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    cursor: busy ? 'not-allowed' : 'pointer',
-                    opacity: busy ? 0.5 : 1,
-                    border: 'none',
-                    borderRadius: tokens.radius.pill,
-                    background: tokens.colors.accent.DEFAULT,
-                    color: '#ffffff',
-                    boxShadow: tokens.shadow.glow,
-                }}
-            >
-                {busy
-                    ? <RefreshCw size={14} strokeWidth={2.5} className="spin" />
-                    : <Sparkles size={14} strokeWidth={2.5} />}
-                {busy ? 'Plane…' : plan ? 'Neu generieren' : 'Plan generieren'}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.md, flexWrap: 'wrap' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{
+                        fontSize: 10,
+                        textTransform: 'uppercase',
+                        letterSpacing: tokens.typography.letterSpacing.wide,
+                        color: tokens.colors.text.tertiary,
+                    }}>Hockey/Woche</span>
+                    <select
+                        value={hockey}
+                        onChange={(e) => onHockey(parseInt(e.target.value, 10))}
+                        disabled={busy}
+                        style={{
+                            ...tokens.glass.input,
+                            padding: '6px 8px',
+                            fontSize: 13,
+                            cursor: busy ? 'not-allowed' : 'pointer',
+                            fontFamily: 'inherit',
+                        }}
+                    >
+                        {[0, 1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                </label>
+                <button
+                    type="button"
+                    onClick={onGenerate}
+                    disabled={busy}
+                    style={{
+                        padding: '10px 18px',
+                        fontSize: tokens.typography.fontSize.sm,
+                        fontWeight: tokens.typography.fontWeight.semibold,
+                        letterSpacing: tokens.typography.letterSpacing.wide,
+                        textTransform: 'uppercase',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        cursor: busy ? 'not-allowed' : 'pointer',
+                        opacity: busy ? 0.5 : 1,
+                        border: 'none',
+                        borderRadius: tokens.radius.pill,
+                        background: tokens.colors.accent.DEFAULT,
+                        color: '#ffffff',
+                        boxShadow: tokens.shadow.glow,
+                    }}
+                >
+                    {busy
+                        ? <RefreshCw size={14} strokeWidth={2.5} className="spin" />
+                        : <Sparkles size={14} strokeWidth={2.5} />}
+                    {busy ? 'Plane…' : plan ? 'Neu generieren' : 'Plan generieren'}
+                </button>
+            </div>
         </div>
     );
 }

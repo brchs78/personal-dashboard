@@ -33,13 +33,13 @@ export function useTrainingPlan() {
         return () => { unsubPlan?.(); unsubDone?.(); };
     }, [refresh]);
 
-    const generate = useCallback(async (weekStart) => {
+    const generate = useCallback(async (weekStart, hockeyPerWeek) => {
         const a = api(); if (!a) return;
         const apiKey = getKey();
         if (!apiKey) { setError('Kein API-Key in Settings hinterlegt'); return; }
         setBusy(true); setError(null);
         try {
-            const next = await a.generate({ apiKey, weekStart });
+            const next = await a.generate({ apiKey, weekStart, hockeyPerWeek });
             setPlan(next);
         } catch (e) {
             setError(String(e?.message || e));

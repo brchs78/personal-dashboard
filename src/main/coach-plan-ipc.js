@@ -22,9 +22,27 @@ function init(getWindow, { getHealthSummary, getHealthTrend } = {}) {
         done: store.getDone(),
     }));
 
-    ipcMain.handle('plan:generate', async (_e, { apiKey, weekStart } = {}) => {
+    ipcMain.handle('plan:generate', async (_e, { apiKey, weekStart, hockeyPerWeek } = {}) => {
         const health = healthGetter();
         const hrvTrend = healthTrendGetter('hrv', 7) || [];
+
+        // Best-effort: frische Strava-Daten holen, damit die Volumen-Basis aktuell
+        // ist (sonst rechnet der Generator auf einem veralteten Cache). Schlägt der
+        // Sync fehl (offline / kein Token / keine Env-Creds), nutzen wir den Cache.
+        try {
+            const clientId = process.env.STRAVA_CLIENT_ID;
+            const clientSecret = process.env.STRAVA_CLIENT_SECRET;
+            if (clientId && clientSecret) {
+                const stravaClient = require('./strava-client.js');
+                const fresh = await stravaClient.listActivities({ clientId, clientSecret }, { perPage: 100 });
+                if (Array.isArray(fresh) && fresh.length) {
+                    stravaStore.saveCache({ activities: fresh, lastSync: new Date().toISOString() });
+                }
+            }
+        } catch (err) {
+            console.warn('[plan:generate] Strava-Sync übersprungen:', err?.message || err);
+        }
+
         const stravaCache = stravaStore.loadCache();
         const activities = stravaCache?.activities || [];
 
@@ -34,6 +52,7 @@ function init(getWindow, { getHealthSummary, getHealthTrend } = {}) {
             hrvTrend,
             activities,
             weekStart,
+            hockeyPerWeek,
         });
         store.saveCurrent(plan);
         broadcast(getWindow(), 'plan:updated', { plan });

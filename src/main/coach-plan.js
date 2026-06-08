@@ -8,13 +8,20 @@ const MARATHON_DATE = '2026-10-11';
 const TARGET_TIME = '3:10';
 const TARGET_PACE = '4:30/km';
 
-const WEEK_FRAME = `WOCHEN-STRUKTUR (flexibel — DU empfiehlst, was optimal ist):
+// Wochen-Struktur abhängig von der konfigurierten Hockey-Anzahl (Saisonende →
+// weniger Hockey → mehr Lauftage). hockeyPerWeek default 2.
+function weekFrame(hockeyPerWeek) {
+    const h = Number.isFinite(hockeyPerWeek) ? Math.max(0, Math.round(hockeyPerWeek)) : 2;
+    const hockeyLine = h > 0
+        ? `Hockey: ${h} Einheit${h > 1 ? 'en' : ''} diese Woche (Cross-Belastung, je ~90 min, bevorzugt Di/Do). KEIN Lauf an Hockey-Tagen.`
+        : `Hockey: KEINE Einheit diese Woche (Saisonpause) → diese Tage als zusätzliche Easy Runs nutzen, um das Lauf-Volumenziel zu erreichen.`;
+    return `WOCHEN-STRUKTUR (flexibel — DU empfiehlst, was optimal ist):
 - 7 Tage Mo-So. Sonntag bleibt Ruhe-/Yoga-Tag (kein Lauf).
-- Hockey ist VARIABLE Cross-Belastung — die Saison läuft aus. STANDARD-ANNAHME: 2 Einheiten (Di/Do, je ~90 min).
-  WENN voraussichtlich weniger/keine Hockey-Einheiten anstehen: diese Tage als Easy Run nutzen und so dem Lauf-Volumenziel näherkommen.
+- ${hockeyLine}
 - Verteile die Ziel-km (siehe ZIEL DIESE WOCHE) auf die empfohlene Anzahl Laufeinheiten. Long Run = Hauptlauf (Sa bevorzugt).
 - Mind. 1 echter Ruhetag (So). Quality-Einheiten NUR in der vorgegebenen Anzahl.
-- Felder "weeklyKm" und "recommendedRunDays" füllen. In "coachNote" klar angeben: geplante Wochen-km, Anzahl Laufeinheiten und wie Hockey eingeplant ist (inkl. was zu tun ist, wenn Hockey wegfällt).`;
+- Felder "weeklyKm" und "recommendedRunDays" füllen. In "coachNote" klar angeben: geplante Wochen-km, Anzahl Laufeinheiten und wie Hockey (${h}/Woche) eingeplant ist.`;
+}
 
 // Deterministischer Makro-Anker (Mittelweg): leitet aus Resttagen bis zum
 // Marathon + aktueller Lauf-Basis das ZIEL DIESER Woche ab — Volumen-Rampe,
@@ -169,7 +176,7 @@ ${recent}`;
     return { text, baseKm };
 }
 
-function buildPrompt({ health, hrvTrend, activities, weekStart }) {
+function buildPrompt({ health, hrvTrend, activities, weekStart, hockeyPerWeek }) {
     // Resttage: lokale Mitternacht beider Daten (kein UTC-Versatz).
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const md = new Date(`${MARATHON_DATE}T00:00:00`);
@@ -202,7 +209,7 @@ ZIEL DIESE WOCHE (Makro-Anker — der rote Faden bis zum Marathon):
 
 DIAGNOSE: ${m.diagnosis}
 
-${WEEK_FRAME}
+${weekFrame(hockeyPerWeek)}
 
 AKTUELLER RECOVERY-STATUS:
 ${summarizeHealth(health)}
@@ -334,10 +341,10 @@ function validatePlan(plan) {
     return plan;
 }
 
-async function generatePlan({ apiKey, health, hrvTrend, activities, weekStart }) {
+async function generatePlan({ apiKey, health, hrvTrend, activities, weekStart, hockeyPerWeek }) {
     if (!apiKey) throw new Error('missing_api_key');
     const start = weekStart || thisMonday();
-    const prompt = buildPrompt({ health, hrvTrend, activities, weekStart: start });
+    const prompt = buildPrompt({ health, hrvTrend, activities, weekStart: start, hockeyPerWeek });
     const raw = await callAnthropic({ apiKey, prompt });
     const plan = validatePlan(extractJson(raw));
     plan.generatedAt = new Date().toISOString();
