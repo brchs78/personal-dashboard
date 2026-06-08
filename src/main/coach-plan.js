@@ -19,33 +19,36 @@ const WEEK_FRAME = `WOCHEN-RAHMEN (fest, nicht ändern):
 
 WICHTIG: Di und Do sind IMMER Hockey. Niemals dort einen Lauf einplanen. So ist IMMER reiner Rest/Yoga-Tag. Die Lauf-km verteilen sich ausschließlich auf Mo, Mi, Sa.`;
 
-const PHASE_GUIDE = `PERIODISIERUNG (Referenz, gesamter Zyklus):
-- Base: NUR Z2/Easy + Long Run. KEINE Intervalle. Volumen 25→60 km/Woche.
-- Build: 1× Threshold + 1× Marathon-Pace-Block, 70-80 km/Woche.
-- Peak: 2× Quality, Long Runs >32 km, 80-90 km/Woche Peak.
-- Taper (letzte 3 Wochen): -40% Volumen, Intensität halten.`;
+// Realistischer Rahmen: NUR 3 Lauftage/Woche (Mo/Mi/Sa). Damit ist das
+// Wochen-Maximum ~50-55 km — KEINE 70-90 km wie bei 6-7 Lauftagen möglich.
+const PHASE_GUIDE = `PERIODISIERUNG (Referenz, an 3 Lauftage/Woche angepasst):
+- Base: NUR Z2/Easy + Long Run. KEINE Intervalle. Fokus Konsistenz. Volumen progressiv ~20→40 km/Woche.
+- Build: + 1 gezielte Quality-Einheit (Tempo/Marathon-Pace). Volumen ~40→50 km/Woche.
+- Peak: Long Run bis ~28-30 km, 1 Quality. Volumen ~50-55 km/Woche (oberes Limit bei 3 Lauftagen).
+- Taper (letzte 3 Wochen): Volumen -30 bis -40%, etwas Schärfe halten.`;
 
 // Aktive Phase aus Resttagen bis zum Marathon ableiten — NICHT statisch.
+// Volumina sind auf 3 Lauftage/Woche kalibriert (realistisches Max ~50-55 km).
 function derivePhase(daysToMarathon) {
     if (daysToMarathon <= 21) return {
         phase: 'Taper',
-        focus: 'Volumen -40%, Intensität halten. Frische aufbauen, kein neues Volumen.',
-        diagnosis: 'Taper-Phase: Erholung priorisieren, Schärfe halten, Beine frisch bekommen. Kurze MP-Touches, kein Volumen-Aufbau mehr.',
+        focus: 'Volumen ggü. Vorwoche -30 bis -40%, kurze Marathon-Pace-Touches halten. Kein neues Volumen, Beine frisch machen.',
+        diagnosis: 'Taper: Erholung & Frische priorisieren. Volumen runter, etwas Schärfe halten.',
     };
     if (daysToMarathon <= 56) return {
         phase: 'Peak',
-        focus: '2× Quality/Woche, Long Runs >32 km, 80-90 km Peak-Volumen.',
-        diagnosis: 'Peak-Phase: Marathon-spezifische Härte. Long Runs mit Marathon-Pace-Blöcken, 2× Quality, höchstes Volumen des Zyklus.',
+        focus: 'Long Run progressiv bis ~28-30 km, 1 Quality-Einheit (Tempo/MP). Wochenvolumen am oberen Ende der bisherigen Progression (Richtwert 50-55 km), NICHT erzwingen.',
+        diagnosis: 'Peak: spezifische Härte über lange Läufe. Volumen halten/leicht steigern, Qualität gezielt.',
     };
     if (daysToMarathon <= 112) return {
         phase: 'Build',
-        focus: '1× Threshold + 1× Marathon-Pace-Block, 70-80 km/Woche.',
-        diagnosis: 'Build-Phase: Schwelle + Marathon-Pace einführen. Volumen weiter steigern, jetzt mit gezielter Qualität — NICHT mehr reines Base-Building.',
+        focus: '1 gezielte Quality-Einheit/Woche (Tempo oder Marathon-Pace-Block, am Mi oder im Long Run), Rest Easy/Z2. Volumen progressiv Richtung ~45-50 km. WENN Basis noch sehr niedrig (<30 km/Woche): effektiv im Base-Aufbau bleiben (Konsistenz, Z2) und Qualität erst einführen, wenn Volumen stabil ist.',
+        diagnosis: 'Build: 1x Qualität ergänzen und Volumen progressiv aufbauen — Konsistenz vor Tempo.',
     };
     return {
         phase: 'Base',
-        focus: 'NUR Z2/Easy + Long Run, keine Intervalle. Volumen 25→60 km/Woche.',
-        diagnosis: 'Base-Phase: Aerobe Basis bauen. Volumen vor Tempo, Mitochondrien-Aufbau. Noch keine Intervalle.',
+        focus: 'NUR Z2/Easy + Long Run, keine Intervalle. Fokus: ALLE 3 Lauftage konsistent treffen. Volumen progressiv aufbauen.',
+        diagnosis: 'Base: aerobe Basis (wieder)aufbauen. Konsistenz schlägt Umfang. Volumen vor Tempo.',
     };
 }
 
@@ -168,10 +171,17 @@ ${summarizeStrava(activities)}
 
 DIAGNOSE: ${diagnosis}
 
+PROGRESSIONS-REGELN (zwingend):
+- Bestimme das Wochenvolumen ausgehend vom letzten ABGESCHLOSSENEN Wochenvolumen (oben) und steigere höchstens +10%.
+- Liegt die aktuelle Basis weit unter dem Phasen-Richtwert (z.B. nach Trainingspause/Lücken): SCHRITTWEISE aufbauen — springe NIEMALS direkt auf den Phasen-Richtwert.
+- Nur 3 Lauftage (Mo/Mi/Sa) → realistisches Wochen-Maximum ~50-55 km. Keine unrealistischen Einzeldistanzen: Easy max ~15 km, Long max ~30 km.
+- Reduktionswoche: wenn das Volumen ~3 Wochen in Folge gestiegen ist, plane DIESE Woche als Entlastung (-25 bis -30%).
+- Recovery-Daten sind teils lückenhaft/verrauscht. Bei fehlenden/unklaren Werten: konservativ bleiben, NICHT auf Verdacht hart pushen, aber auch nicht alles unnötig downgraden.
+- PRIORITÄT #1: Konsistenz — alle 3 Lauftage müssen real machbar sein. Lieber etwas weniger km, dafür sicher absolvierbar.
+
 AUFGABE:
 Erstelle die Trainingswoche ab ${weekStart} (Mo-So, 7 Tage).
-Berücksichtige Recovery-Status: bei niedriger HRV oder schlechtem Schlaf → Easy statt Quality.
-Halte +10%-Regel ein basierend auf Wochenvolumen oben.
+Bei niedriger HRV oder schlechtem Schlaf → Quality zu Easy downgraden.
 
 ANTWORTE NUR ALS VALIDES JSON (keine Code-Fences, kein Text drumherum) NACH DIESEM SCHEMA:
 {
