@@ -184,7 +184,7 @@ function WeekSummary({ plan, done }) {
         <div style={{ ...tokens.glass.card, padding: tokens.spacing.lg, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: tokens.spacing.md }}>
             <SummaryStat icon={Calendar} label="Phase" value={plan.phase || '–'} />
             <SummaryStat icon={Flame} label="km geplant" value={total.toFixed(0)} />
-            <SummaryStat icon={CheckCircle2} label="Erledigt" value={`${completedCount}/${totalCount}`} />
+            <SummaryStat icon={CheckCircle2} label={plan.recommendedRunDays ? 'Läufe / Erledigt' : 'Erledigt'} value={plan.recommendedRunDays ? `${plan.recommendedRunDays} · ${completedCount}/${totalCount}` : `${completedCount}/${totalCount}`} />
             {plan.summary && (
                 <p style={{
                     gridColumn: '1 / -1',
@@ -196,6 +196,18 @@ function WeekSummary({ plan, done }) {
                     borderTop: `1px solid ${tokens.colors.border.glass}`,
                 }}>
                     {plan.summary}
+                </p>
+            )}
+            {plan.coachNote && (
+                <p style={{
+                    gridColumn: '1 / -1',
+                    margin: 0,
+                    fontSize: 12,
+                    color: tokens.colors.text.tertiary,
+                    lineHeight: 1.5,
+                    fontStyle: 'italic',
+                }}>
+                    {plan.coachNote}
                 </p>
             )}
         </div>
@@ -372,22 +384,22 @@ function PhaseExplainer({ phase }) {
     const explainers = {
         Base: {
             title: 'Phase 1 · Base-Building',
-            text: 'Aerobe Basis aufbauen. Nur Easy + Long Run. Keine Intervalle. Mitochondrien wachsen, Sehnen härten. Volumen progressiv +10%/Woche.',
+            text: 'Aerobe Basis aufbauen. Nur Easy + Long Run (Strides erlaubt). Konsistenz über alle Lauftage. Volumen sanft & progressiv steigern.',
             icon: Moon,
         },
         Build: {
             title: 'Phase 2 · Aerobic Build',
-            text: 'Schwelle + Marathon-Pace-Blocks. 1-2 Quality-Einheiten pro Woche. Volumen 70-80 km.',
+            text: '1 Quality-Einheit/Woche (Threshold 4:00-4:10/km oder Marathon-Pace 4:30/km). Volumen progressiv steigern, MP im Long Run einführen.',
             icon: Flame,
         },
         Peak: {
             title: 'Phase 3 · Peak',
-            text: 'Maximales Volumen + 2× Quality. Long Runs >32 km. Spezifität für Marathon.',
+            text: 'Volumen am oberen Ende + bis 2× Quality. Long Runs bis ~34 km mit großen Marathon-Pace-Blöcken. Maximale Spezifität.',
             icon: Flame,
         },
         Taper: {
             title: 'Phase 4 · Taper',
-            text: 'Volumen -40%/Woche, Intensität halten. Frisch an die Startlinie.',
+            text: 'Volumen -30 bis -40%, kurze MP-Touches halten. Frisch an die Startlinie.',
             icon: Sparkles,
         },
     };
