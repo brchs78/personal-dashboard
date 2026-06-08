@@ -83,6 +83,11 @@ const TOOLS = [
         input_schema: { type: 'object', properties: {} },
     },
     {
+        name: 'get_week_plan',
+        description: 'Hole den vollständigen aktuellen Trainingsplan (alle 7 Tage der Woche, Phase, Wochen-km, Zusammenfassung, Coach-Note, phaseNote, nextWeekPreview). Nutze dieses Tool wenn Ole über die Woche als Ganzes fragt, wenn heute Sonntag ist (Ausblick auf nächste Woche), oder wenn du wissen willst was nächste Woche geplant ist.',
+        input_schema: { type: 'object', properties: {} },
+    },
+    {
         name: 'get_recovery_status',
         description: 'Hole den aktuellen Recovery-Snapshot (RHR, HRV, Schlaf, HR-Recovery 1min). Liefert null wenn keine Health-Daten verfügbar.',
         input_schema: { type: 'object', properties: {} },
@@ -290,6 +295,36 @@ async function dispatch(name, input, ctx = {}) {
             const today = todayISO();
             const day = plan.days.find((d) => d.date === today);
             return day || null;
+        }
+        case 'get_week_plan': {
+            const plan = coachPlanStore.loadCurrent();
+            if (!plan) return { error: 'no_plan', message: 'Kein Trainingsplan vorhanden. Bitte erst generieren.' };
+            const done = coachPlanStore.getDone?.() || {};
+            return {
+                weekStart: plan.weekStart,
+                phase: plan.phase,
+                phaseNote: plan.phaseNote || null,
+                weeklyKm: plan.weeklyKm,
+                runDays: plan.runDays,
+                isDeload: plan.isDeload || false,
+                deloadEnforced: plan.deloadEnforced || false,
+                summary: plan.summary,
+                coachNote: plan.coachNote,
+                actualPrevKm: plan.actualPrevKm || null,
+                days: (plan.days || []).map((d) => ({
+                    date: d.date,
+                    dayLabel: d.dayLabel,
+                    type: d.type,
+                    title: d.title,
+                    distanceKm: d.distanceKm,
+                    durationMin: d.durationMin,
+                    paceTarget: d.paceTarget,
+                    hrZone: d.hrZone,
+                    notes: d.notes,
+                    done: !!done[d.date],
+                })),
+                nextWeekPreview: plan.nextWeekPreview || null,
+            };
         }
         case 'get_recovery_status': {
             const summary = getHealthSummary?.();

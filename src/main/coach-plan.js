@@ -17,7 +17,8 @@ const WEEK_FRAME = `WOCHEN-RAHMEN (fest, nicht ändern):
 - Sa: Long Run (Hauptlauf der Woche)
 - So: Standard = REST + Yoga/Mobility. NUR wenn Verfügbarkeit ≥4 Lauftage verlangt → kurzer Recovery-Run (Z1, 5-6 km).
 
-WICHTIG: Di und Do sind IMMER Hockey — niemals dort einen Lauf einplanen. Lauf-km verteilen sich auf Mo, Mi, Sa (+ optional So bei ≥4 Lauftagen).`;
+WICHTIG: Di und Do sind IMMER Hockey — niemals dort einen Lauf einplanen. Lauf-km verteilen sich auf Mo, Mi, Sa (+ optional So bei ≥4 Lauftagen).
+KEIN GYM: Ole hat keinen Gym-Zugang. Krafttraining ausschließlich mit Körpergewicht (Calisthenics, Core, Mobility, Bodyweight-Übungen). Niemals Gym/Fitnessstudio/Geräte einplanen.`;
 
 const PHASE_GUIDE = `PHASEN-MODELL (Makrozyklus bis Marathon):
 - Phase 1 (Base, >12 Wochen vor Marathon): NUR Z2/Easy + Long Run. KEINE Intervalle. Volumen progressiv aufbauen.
@@ -139,10 +140,16 @@ function actualWeekKm(weekStartISO, activities) {
         .reduce((s, a) => s + a.distance / 1000, 0);
 }
 
-// Absolvierte km der Vorwoche — Strava-Ist, Fallback auf erledigte Plan-Tage.
-function prevActualKm(prevPlan, done, activities) {
-    if (prevPlan?.weekStart && activities?.length > 0) {
-        const stravaKm = actualWeekKm(prevPlan.weekStart, activities);
+function prevWeekStartISO(weekStartISO) {
+    return new Date(new Date(weekStartISO).getTime() - 7 * 86400000).toISOString().slice(0, 10);
+}
+
+// Absolvierte km der Vorwoche — IMMER die Kalenderwoche direkt vor der neuen
+// Planwoche (Strava-Ist), unabhängig davon ob dafür ein Plan existierte.
+// Fallback auf erledigte Plan-Tage nur wenn kein Strava-Wert vorliegt.
+function prevActualKm(newWeekStart, prevPlan, done, activities) {
+    if (newWeekStart && activities?.length > 0) {
+        const stravaKm = actualWeekKm(prevWeekStartISO(newWeekStart), activities);
         if (stravaKm > 0) return stravaKm;
     }
     // Fallback: nur erledigte Tage des letzten Plans summieren
@@ -420,8 +427,8 @@ async function generatePlan({ apiKey, health, hrvTrend, activities, weekStart, p
     if (!apiKey) throw new Error('missing_api_key');
     const start = weekStart || thisMonday();
 
-    // Fix 5 — IST-Basis: echte absolvierte km der Vorwoche
-    const actualPrevKm = prevActualKm(prevPlan, done, activities);
+    // Fix 5 — IST-Basis: echte absolvierte km der Kalenderwoche vor dieser Planwoche
+    const actualPrevKm = prevActualKm(start, prevPlan, done, activities);
 
     // Fix 1 — Readiness-Gate: Kalender gibt Obergrenze, Fitness entscheidet
     const calendarPhase = computePhase(start);
