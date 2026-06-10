@@ -50,6 +50,21 @@ export function useKitchen() {
     const mealAdd = useCallback((partial) => api()?.mealAdd(partial), []);
     const mealUpdate = useCallback((id, patch) => api()?.mealUpdate(id, patch), []);
     const mealRemove = useCallback((id) => api()?.mealRemove(id), []);
+    // Makros aus freier Beschreibung schätzen lassen (kein Speichern).
+    const estimateMeal = useCallback(async (description, mealType) => {
+        const a = api(); if (!a) return null;
+        const apiKey = getKey();
+        if (!apiKey) { setError('Kein API-Key in Settings hinterlegt'); return null; }
+        setBusy(true); setError(null);
+        try {
+            return await a.mealEstimate({ apiKey, description, mealType });
+        } catch (e) {
+            setError(String(e?.message || e));
+            return null;
+        } finally {
+            setBusy(false);
+        }
+    }, []);
 
     // ── Bon-Import ────────────────────────────────────────────────────
     const importReceipt = useCallback(async () => {
@@ -113,7 +128,7 @@ export function useKitchen() {
     return {
         data, costs, busy, error,
         invAdd, invUpdate, invRemove, invConsume,
-        mealAdd, mealUpdate, mealRemove,
+        mealAdd, mealUpdate, mealRemove, estimateMeal,
         importReceipt, confirmImport,
         generateRecipe, saveRecipe, updateRecipe, removeRecipe, applyConsumption,
         updateMacroProfile, setMacroOverride, generateDayPlan,

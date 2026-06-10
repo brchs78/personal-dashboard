@@ -182,6 +182,7 @@ function Heute({ k, plan, acc }) {
                     acc={acc}
                     onSave={(data) => { k.mealAdd({ ...data, date: today, source: 'manuell' }); setShowForm(false); }}
                     onCancel={() => setShowForm(false)}
+                    onEstimate={(name, mealType) => k.estimateMeal(name, mealType)}
                 />
             )}
 
@@ -252,24 +253,39 @@ function TodayMealRow({ meal, acc, onRemove, tokens }) {
 }
 
 // Formular zum schnellen Erfassen einer Mahlzeit
-function MealLogForm({ acc, onSave, onCancel }) {
+function MealLogForm({ acc, onSave, onCancel, onEstimate }) {
     const { tokens } = useTheme();
     const [form, setForm] = useState({ name: '', mealType: 'Frühstück', kcal: '', protein: '', carbs: '', fat: '', cost: '' });
+    const [estimating, setEstimating] = useState(false);
     const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
     const num = (v) => v === '' ? null : (Number(v) || 0);
     const valid = form.name.trim() && form.kcal !== '';
+
+    async function estimate() {
+        if (!form.name.trim() || !onEstimate) return;
+        setEstimating(true);
+        const r = await onEstimate(form.name.trim(), form.mealType);
+        setEstimating(false);
+        if (r) setForm((f) => ({ ...f, name: r.name || f.name, kcal: String(r.kcal), protein: String(r.protein), carbs: String(r.carbs), fat: String(r.fat) }));
+    }
 
     return (
         <div style={{ ...tokens.glass.card, padding: tokens.spacing.md, display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm, borderLeft: `3px solid ${acc}` }}>
             <p style={{ margin: 0, fontSize: tokens.typography.fontSize.sm, fontWeight: tokens.typography.fontWeight.semibold, color: tokens.colors.text.primary }}>Mahlzeit erfassen</p>
             <div style={{ display: 'flex', gap: tokens.spacing.sm, flexWrap: 'wrap' }}>
-                <input placeholder="Name" value={form.name} onChange={(e) => set('name', e.target.value)}
+                <input autoFocus placeholder='Was hast du gegessen? z.B. "2 Brötchen mit Käse"' value={form.name}
+                    onChange={(e) => set('name', e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && estimate()}
                     style={{ ...tokens.glass.input, padding: '6px 10px', flex: 2, minWidth: 140, fontSize: tokens.typography.fontSize.sm, outline: 'none' }} />
                 <select value={form.mealType} onChange={(e) => set('mealType', e.target.value)}
                     style={{ ...tokens.glass.input, padding: '6px 10px', flex: 1, minWidth: 120, fontSize: tokens.typography.fontSize.sm, outline: 'none', cursor: 'pointer' }}>
                     {MEAL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
             </div>
+            {onEstimate && (
+                <ActionBtn acc={acc} icon={Sparkles} disabled={!form.name.trim() || estimating} spin={estimating}
+                    onClick={estimate}>{estimating ? 'Schätze…' : 'Makros von KI schätzen'}</ActionBtn>
+            )}
             <div style={{ display: 'flex', gap: tokens.spacing.xs, flexWrap: 'wrap' }}>
                 {[['kcal','Kkal'],['protein','P (g)'],['carbs','K (g)'],['fat','F (g)'],['cost','Kosten €']].map(([key, ph]) => (
                     <input key={key} type="number" placeholder={ph} value={form[key]}

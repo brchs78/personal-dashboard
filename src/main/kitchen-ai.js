@@ -5,6 +5,12 @@
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-5';
 
+// Festes Ernährungsprofil — gilt für ALLE Rezept-/Tagesplan-Vorschläge.
+const DIET_PROFILE = `ERNÄHRUNGS-PROFIL (IMMER strikt beachten):
+- Vegetarisch: KEIN Fleisch, KEIN Fisch, KEINE Meeresfrüchte. Eier, Milchprodukte, Käse sind erlaubt.
+- Günstig einkaufen: bevorzuge preiswerte Grundzutaten (Hülsenfrüchte, Eier, Haferflocken, Reis, Nudeln, Kartoffeln, Quark/Skyr, Tofu, saisonales Gemüse, Tiefkühlgemüse). Vermeide teure Spezial- oder Convenience-Produkte.
+- KEIN Ofen verfügbar: Zubereitung NUR mit Herd (Pfanne/Topf), Mikrowelle oder ganz ohne Kochen. NIEMALS Backofen, Backen, Überbacken, Grill oder Rösten im Ofen voraussetzen.`;
+
 // Robustes JSON-Parsing: schält ```json-Fences ab, schneidet auf erstes/letztes
 // Klammer-Paar zu. content = Text der Assistant-Antwort.
 function extractJSON(text) {
@@ -85,6 +91,7 @@ async function generateRecipe({ apiKey, inventory = [], macroTarget = {}, traini
         : '(Inventar leer)';
     const mt = macroTarget || {};
     const system = `Du bist Oles Ernährungs-Coach (Ausdauerathlet, 72kg, Marathon-Training).
+${DIET_PROFILE}
 Erstelle EIN konkretes, alltagstaugliches Rezept, das das Makroziel der Mahlzeit möglichst trifft und vorrangig vorhandenes Inventar nutzt.
 Zutaten, die NICHT im Inventar sind, gehören in "missing".
 Nutze realistische Mengen und gib die geschätzten Gesamt-Makros des Rezepts (für alle Portionen zusammen) an.
@@ -132,6 +139,7 @@ async function generateDayPlan({ apiKey, inventory = [], macroTarget = {}, train
         : `Tagesziel: ${mt.kcal ?? '?'} kcal, ${mt.protein ?? '?'}g P, ${mt.carbs ?? '?'}g K, ${mt.fat ?? '?'}g F`;
 
     const system = `Du bist Oles Ernährungs-Coach (Ausdauerathlet, 72kg, Marathon-Training).
+${DIET_PROFILE}
 Erstelle einen praktischen Tagesernährungsplan mit 3–4 Mahlzeiten, der das Makroziel trifft.
 Nutze vorrangig verfügbares Inventar. Zutaten außerhalb des Inventars in "missing" angeben.
 Antworte deutsch, knapp. Mahlzeiten realistisch und schnell zuzubereiten.`;
@@ -173,4 +181,28 @@ Gib NUR JSON zurück. Schema:
     };
 }
 
-module.exports = { parseReceipt, generateRecipe, generateDayPlan };
+// Schätzt Makros einer gegessenen Mahlzeit aus freier Text-Beschreibung.
+// Ole tippt nur, WAS er gegessen hat — die KI schätzt kcal/Protein/Carbs/Fett.
+async function estimateMeal({ apiKey, description, mealType = '' }) {
+    if (!description || !String(description).trim()) throw new Error('missing_description');
+    const system = `Du schätzt Nährwerte gegessener Mahlzeiten für einen Ausdauerathleten (72kg).
+Aus einer kurzen Beschreibung schätzt du realistische Gesamt-Makros der gegessenen Portion.
+Fehlen Mengenangaben, nimm typische Portionsgrößen an. Sei realistisch, nicht zu niedrig.
+Antworte NUR mit JSON, keine Erklärung.`;
+    const userText = `Gegessene Mahlzeit${mealType ? ` (${mealType})` : ''}: "${String(description).trim()}"
+
+Gib NUR JSON zurück. Schema:
+{ "name": string (kurzer, sauberer Mahlzeit-Name), "kcal": number, "protein": number, "carbs": number, "fat": number }`;
+    const messages = [{ role: 'user', content: userText }];
+    const text = await callAnthropic({ apiKey, messages, maxTokens: 500, system });
+    const p = extractJSON(text);
+    return {
+        name: String(p.name || String(description).trim()),
+        kcal: Math.round(Number(p.kcal) || 0),
+        protein: Math.round(Number(p.protein) || 0),
+        carbs: Math.round(Number(p.carbs) || 0),
+        fat: Math.round(Number(p.fat) || 0),
+    };
+}
+
+module.exports = { parseReceipt, generateRecipe, generateDayPlan, estimateMeal };

@@ -50,6 +50,10 @@ function init(getWindow) {
     ipcMain.handle('kitchen:inv-consume', (_e, { id, amount } = {}) => emit(store.consumeInventoryItem(id, amount)));
 
     // ── Auswärtige Mahlzeiten ─────────────────────────────────────────
+    // Makros aus freier Beschreibung schätzen (speichert NICHT).
+    ipcMain.handle('kitchen:meal-estimate', async (_e, { apiKey, description, mealType } = {}) =>
+        ai.estimateMeal({ apiKey, description, mealType })
+    );
     ipcMain.handle('kitchen:meal-add', (_e, partial) => emit(store.addMeal(partial)));
     ipcMain.handle('kitchen:meal-update', (_e, { id, patch } = {}) => emit(store.updateMeal(id, patch)));
     ipcMain.handle('kitchen:meal-remove', (_e, id) => emit(store.removeMeal(id)));

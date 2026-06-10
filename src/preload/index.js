@@ -99,6 +99,7 @@ contextBridge.exposeInMainWorld('oleAPI', {
         invUpdate:       (id, patch) => ipcRenderer.invoke('kitchen:inv-update', { id, patch }),
         invRemove:       (id) => ipcRenderer.invoke('kitchen:inv-remove', id),
         invConsume:      (id, amount) => ipcRenderer.invoke('kitchen:inv-consume', { id, amount }),
+        mealEstimate:    (opts) => ipcRenderer.invoke('kitchen:meal-estimate', opts),
         mealAdd:         (partial) => ipcRenderer.invoke('kitchen:meal-add', partial),
         mealUpdate:      (id, patch) => ipcRenderer.invoke('kitchen:meal-update', { id, patch }),
         mealRemove:      (id) => ipcRenderer.invoke('kitchen:meal-remove', id),
