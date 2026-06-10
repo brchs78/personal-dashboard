@@ -14,8 +14,8 @@ import { useTrainingPlan } from '../hooks/useTrainingPlan';
 import { useTheme } from '../hooks/useTheme.jsx';
 
 function todayISO() {
-    const d = new Date(); d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 10);
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function eur(n) {
@@ -40,6 +40,7 @@ const SUBTABS = [
 
 const MEAL_TYPES = ['Frühstück', 'Mittagessen', 'Abendessen', 'Snack'];
 const MEAL_ICONS = { 'Frühstück': Coffee, 'Mittagessen': Sandwich, 'Abendessen': UtensilsCrossed, 'Snack': Apple };
+const UNITS = ['g', 'kg', 'ml', 'l', 'Stk', 'Pkg', 'Dose', 'Flasche'];
 
 export default function Kitchen() {
     const { tokens } = useTheme();
@@ -404,9 +405,7 @@ function InventoryRow({ item, acc, onUpdate, onConsume, onRemove }) {
                 fontWeight: tokens.typography.fontWeight.semibold, outline: 'none', minWidth: 0,
             }} />
             <NumField value={item.qty} onCommit={(v) => onUpdate({ qty: v })} width={56} />
-            <input value={item.unit} onChange={(e) => onUpdate({ unit: e.target.value })} style={{
-                ...tokens.glass.input, padding: '6px 8px', fontSize: tokens.typography.fontSize.sm, width: 52, outline: 'none',
-            }} />
+            <UnitSelect value={item.unit} onChange={(v) => onUpdate({ unit: v })} style={{ width: 66 }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, opacity: hover ? 1 : 0.5, transition: 'opacity .15s' }}>
                 <span style={{ fontSize: tokens.typography.fontSize.xs, color: tokens.colors.text.tertiary, marginRight: 4 }}>
                     {item.price !== null ? eur(item.price) : ''}
@@ -433,7 +432,7 @@ function ItemForm({ acc, onSubmit }) {
             <input autoFocus placeholder="Name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })}
                 onKeyDown={(e) => e.key === 'Enter' && submit()} style={inp} />
             <input type="number" placeholder="Menge" value={f.qty} onChange={(e) => setF({ ...f, qty: e.target.value })} style={inp} />
-            <input placeholder="Einheit" value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} style={inp} />
+            <UnitSelect value={f.unit} onChange={(v) => setF({ ...f, unit: v })} />
             <input type="number" step="0.01" placeholder="€" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} style={inp} />
             <input type="date" title="MHD (optional)" value={f.expiryDate} onChange={(e) => setF({ ...f, expiryDate: e.target.value })} style={{ ...inp, colorScheme: 'light' }} />
             <IconBtn title="Hinzufügen" onClick={submit} color={acc}><Plus size={16} strokeWidth={2.5} /></IconBtn>
@@ -465,7 +464,7 @@ function ReceiptPreview({ preview, acc, onConfirm, onCancel }) {
                         <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.6fr .6fr .6fr .8fr auto', gap: tokens.spacing.xs, alignItems: 'center' }}>
                             <input value={it.name} onChange={(e) => upd(i, { name: e.target.value })} style={inp} />
                             <input type="number" value={it.qty} onChange={(e) => upd(i, { qty: e.target.value })} style={inp} />
-                            <input value={it.unit} onChange={(e) => upd(i, { unit: e.target.value })} style={inp} />
+                            <UnitSelect value={it.unit} onChange={(v) => upd(i, { unit: v })} />
                             <input type="number" step="0.01" value={it.price ?? ''} onChange={(e) => upd(i, { price: e.target.value })} style={inp} />
                             <IconBtn title="Entfernen" onClick={() => del(i)} color={tokens.colors.text.tertiary}><X size={14} /></IconBtn>
                         </div>
@@ -857,6 +856,17 @@ function weekDays(plan) {
         const dt = new Date(d.date + 'T00:00:00');
         return { date: d.date, label: `${DOW[dt.getDay()]} ${dt.getDate()}.` };
     });
+}
+
+function UnitSelect({ value, onChange, style }) {
+    const { tokens } = useTheme();
+    return (
+        <select value={UNITS.includes(value) ? value : value} onChange={(e) => onChange(e.target.value)}
+            style={{ ...tokens.glass.input, padding: '6px 4px', fontSize: tokens.typography.fontSize.sm, outline: 'none', cursor: 'pointer', ...style }}>
+            {UNITS.includes(value) ? null : <option value={value}>{value}</option>}
+            {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+        </select>
+    );
 }
 
 function ActionBtn({ children, acc, ghost, onClick, disabled, icon: Icon, spin }) {
