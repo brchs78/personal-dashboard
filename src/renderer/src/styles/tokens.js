@@ -55,6 +55,7 @@ const lightColors = {
     uni: "#8b7355",
     calendar: "#7a6b56",
     routine: "#c98a4b",
+    kitchen: "#6f9460",
   },
 };
 
@@ -112,6 +113,7 @@ const darkColors = {
     uni: "#b89e7e",
     calendar: "#a89878",
     routine: "#d6a766",
+    kitchen: "#8bb079",
   },
 };
 

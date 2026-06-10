@@ -17,6 +17,7 @@ const stravaStore = require('./strava-store.js')
 const vaultExportIPC = require('./vault-export-ipc.js')
 const vaultExport = require('./vault-export.js')
 const routineIPC = require('./routine-ipc.js')
+const kitchenIPC = require('./kitchen-ipc.js')
 
 let mainWindow = null
 let tray = null
@@ -158,6 +159,7 @@ app.whenReady().then(() => {
     })
     vaultExportIPC.init(() => mainWindow, vaultDeps)
     routineIPC.init(() => mainWindow)
+    kitchenIPC.init(() => mainWindow)
     app.on('activate', () => showWindow())
 })
 app.on('will-quit', () => globalShortcut.unregisterAll())

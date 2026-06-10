@@ -13,6 +13,7 @@ import {
     Flame,
     Sunrise,
     GraduationCap,
+    UtensilsCrossed,
     Settings,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme.jsx";
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
     { id: "todo", icon: ListTodo, label: "ToDo" },
     { id: "habit", icon: Flame, label: "Habits" },
     { id: "routine", icon: Sunrise, label: "Routine" },
+    { id: "kitchen", icon: UtensilsCrossed, label: "Küche" },
     { id: "uni", icon: GraduationCap, label: "Uni" },
 ];
 
