@@ -1,15 +1,16 @@
-// OLE OS — Health Tab (Phase 1: Schlaf + Herz)
-// Hero-Kacheln + Schlaf-Detail + Herz-Trends.
-// Daten kommen aus useHealthSummary / useHealthTrend (IPC → Main → Cache).
+// OLE OS — Health Tab (COROS)
+// Hero-Kacheln (Schlaf / RHR / HRV / Recovery / VO2max / Training-Load),
+// Schlaf-Detail + Herz-Trends. Daten kommen aus useCorosSummary / useCorosTrend
+// (IPC → Main → MCP-Client → Cache).
 
-import { Moon, Heart, Activity, Zap, RefreshCw } from 'lucide-react';
-import { useHealthSummary, useHealthTrend } from '../hooks/useHealth';
+import { Moon, Heart, Activity, Shield, Wind, Flame, RefreshCw, Link2, Unlink } from 'lucide-react';
+import { useCorosSummary, useCorosTrend } from '../hooks/useCoros';
 import StravaSection from './StravaSection';
 import { useTheme } from "../hooks/useTheme.jsx";
 
 export default function Health() {
     const { tokens } = useTheme();
-    const { summary, status, progress, refresh } = useHealthSummary();
+    const { summary, status, syncedAt, connect, disconnect, refresh } = useCorosSummary();
 
     return (
         <div
@@ -22,15 +23,22 @@ export default function Health() {
                 margin: '0 auto',
             }}
         >
-            <Header status={status} progress={progress} meta={summary?.meta} onRefresh={refresh} />
+            <Header
+                status={status}
+                syncedAt={syncedAt}
+                connected={status === 'ready' || status === 'syncing'}
+                onRefresh={refresh}
+                onDisconnect={disconnect}
+            />
 
-            {status === 'no-source' && <NoSourceCard />}
+            {status === 'disconnected' && <ConnectCard onConnect={connect} busy={false} />}
+            {status === 'syncing' && !summary && <ConnectCard onConnect={connect} busy={true} />}
             {status === 'error' && <ErrorCard />}
 
-            {summary?.latest && (
+            {summary && (
                 <>
-                    <HeroGrid latest={summary.latest} />
-                    <SleepSection latest={summary.latest.sleep} />
+                    <HeroGrid latest={summary} />
+                    <SleepSection latest={summary.sleep} />
                     <HeartSection />
                 </>
             )}
@@ -40,19 +48,16 @@ export default function Health() {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Header — H2 + Status + Refresh-Button
+// Header — H2 + Status + Sync/Trennen
 // ──────────────────────────────────────────────────────────────────
-function Header({ status, progress, meta, onRefresh }) {
+function Header({ status, syncedAt, connected, onRefresh, onDisconnect }) {
     const { tokens } = useTheme();
     const subline = (() => {
-        if (status === 'parsing') return `Apple Health wird importiert… ${progress}%`;
+        if (status === 'syncing') return 'COROS wird synchronisiert…';
         if (status === 'loading') return 'Lade…';
-        if (status === 'no-source') return 'Keine Export.xml gefunden';
-        if (status === 'error') return 'Fehler beim Import';
-        if (meta?.exportDate) {
-            const d = String(meta.exportDate).slice(0, 10);
-            return `Export vom ${d} · ${formatNumber(meta.recordsKept)} relevante Datensätze`;
-        }
+        if (status === 'disconnected') return 'Nicht verbunden';
+        if (status === 'error') return 'Fehler beim Abruf';
+        if (syncedAt) return `Sync ${fmtSync(syncedAt)}`;
         return '';
     })();
 
@@ -77,7 +82,7 @@ function Header({ status, progress, meta, onRefresh }) {
                         letterSpacing: tokens.typography.letterSpacing.tight,
                     }}
                 >
-                    Health
+                    Gesundheit
                 </h2>
                 {subline && (
                     <p
@@ -93,34 +98,46 @@ function Header({ status, progress, meta, onRefresh }) {
                     </p>
                 )}
             </div>
-            <button
-                type="button"
-                onClick={onRefresh}
-                disabled={status === 'parsing'}
-                title="Apple Health neu importieren"
-                style={{
-                    ...tokens.glass.button,
-                    padding: '8px 14px',
-                    fontSize: tokens.typography.fontSize.xs,
-                    fontWeight: tokens.typography.fontWeight.semibold,
-                    letterSpacing: tokens.typography.letterSpacing.wide,
-                    textTransform: 'uppercase',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    cursor: status === 'parsing' ? 'not-allowed' : 'pointer',
-                    opacity: status === 'parsing' ? 0.5 : 1,
-                }}
-            >
-                <RefreshCw size={12} strokeWidth={2.5} />
-                Reimport
-            </button>
+            {connected && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <IconButton onClick={onRefresh} disabled={status === 'syncing'} title="COROS synchronisieren">
+                        <RefreshCw size={12} strokeWidth={2.5} />
+                        Sync
+                    </IconButton>
+                    <IconButton onClick={onDisconnect} disabled={status === 'syncing'} title="Trennen">
+                        <Unlink size={12} strokeWidth={2.5} />
+                        Trennen
+                    </IconButton>
+                </div>
+            )}
         </div>
     );
 }
 
+function IconButton({ children, onClick, disabled, title }) {
+    const { tokens } = useTheme();
+    return (
+        <button type="button" onClick={onClick} disabled={disabled} title={title}
+            style={{
+                ...tokens.glass.button,
+                padding: '8px 12px',
+                fontSize: tokens.typography.fontSize.xs,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                letterSpacing: tokens.typography.letterSpacing.wide,
+                textTransform: 'uppercase',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.5 : 1,
+            }}>
+            {children}
+        </button>
+    );
+}
+
 // ──────────────────────────────────────────────────────────────────
-// HeroGrid — 4 Kacheln (Sleep / RHR / HRV / Recovery)
+// HeroGrid — 6 Kacheln (Sleep / RHR / HRV / Recovery / VO2max / Load)
 // ──────────────────────────────────────────────────────────────────
 function HeroGrid({ latest }) {
     const { tokens } = useTheme();
@@ -146,11 +163,24 @@ function HeroGrid({ latest }) {
             sub: latest.hrv?.date || '',
         },
         {
-            icon: Zap,
-            label: 'HR Recovery',
-            value: latest.hrRecovery ? Math.round(latest.hrRecovery.value) : '—',
-            unit: latest.hrRecovery ? 'bpm/min' : '',
-            sub: latest.hrRecovery?.date || '',
+            icon: Shield,
+            label: 'Recovery',
+            value: latest.recovery ? Math.round(latest.recovery.value) : '—',
+            unit: latest.recovery ? '%' : '',
+            sub: latest.recovery?.date || '',
+        },
+        {
+            icon: Wind,
+            label: 'VO2max',
+            value: latest.vo2max ? Math.round(latest.vo2max.value) : '—',
+            unit: latest.vo2max ? 'ml/kg' : '',
+            sub: latest.vo2max?.date || '',
+        },
+        {
+            icon: Flame,
+            label: 'Training-Load',
+            value: latest.trainingLoad ? Math.round(latest.trainingLoad.value) : '—',
+            sub: latest.trainingLoad?.date || '',
         },
     ];
 
@@ -262,7 +292,7 @@ function HeroTile({ icon: Icon, label, value, unit, sub }) {
 // ──────────────────────────────────────────────────────────────────
 function SleepSection({ latest }) {
     const { tokens } = useTheme();
-    const { points: trend7 } = useHealthTrend('sleepTotal', 7);
+    const { points: trend7 } = useCorosTrend('sleepTotal', 7);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.md }}>
@@ -341,9 +371,9 @@ function StageBar({ stages }) {
     const total = (stages.awake || 0) + (stages.rem || 0) + (stages.core || 0) + (stages.deep || 0);
     if (total === 0) return null;
     const segs = [
-        { key: 'deep',  v: stages.deep || 0,  color: '#6366f1' }, // deep purple
+        { key: 'deep',  v: stages.deep || 0,  color: '#6366f1' },
         { key: 'core',  v: stages.core || 0,  color: tokens.colors.accent.DEFAULT },
-        { key: 'rem',   v: stages.rem || 0,   color: '#c026d3' }, // sky
+        { key: 'rem',   v: stages.rem || 0,   color: '#c026d3' },
         { key: 'awake', v: stages.awake || 0, color: tokens.colors.text.tertiary },
     ];
     return (
@@ -437,8 +467,8 @@ function SleepBars({ points }) {
 // ──────────────────────────────────────────────────────────────────
 function HeartSection() {
     const { tokens } = useTheme();
-    const { points: rhr } = useHealthTrend('rhr', 30);
-    const { points: hrv } = useHealthTrend('hrv', 30);
+    const { points: rhr } = useCorosTrend('rhr', 30);
+    const { points: hrv } = useCorosTrend('hrv', 30);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.md }}>
@@ -451,7 +481,7 @@ function HeartSection() {
                 decimals={0}
             />
             <SparkCard
-                title="HRV (SDNN)"
+                title="HRV"
                 unit="ms"
                 points={hrv}
                 color={tokens.colors.accent.secondary}
@@ -538,36 +568,48 @@ function SparkCard({ title, unit, points, color, decimals = 0 }) {
 }
 
 // ──────────────────────────────────────────────────────────────────
-// Status-Cards (no-source / error)
+// Status-Cards (disconnected / error)
 // ──────────────────────────────────────────────────────────────────
-function NoSourceCard() {
+function ConnectCard({ onConnect, busy }) {
     const { tokens } = useTheme();
     return (
-        <div style={{ ...tokens.glass.card, padding: tokens.spacing.lg }}>
-            <p
+        <div style={{
+            ...tokens.glass.card,
+            padding: tokens.spacing.lg,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: tokens.spacing.md,
+            alignItems: 'flex-start',
+        }}>
+            <p style={{ margin: 0, fontSize: tokens.typography.fontSize.sm, color: tokens.colors.text.secondary, lineHeight: 1.5 }}>
+                Verbinde deine COROS-Uhr, um Schlaf, HRV, Recovery, Resting HR, VO2max
+                und Training-Load direkt in OLE OS zu sehen.
+            </p>
+            <button
+                type="button"
+                onClick={onConnect}
+                disabled={busy}
                 style={{
-                    margin: 0,
+                    padding: '10px 18px',
                     fontSize: tokens.typography.fontSize.sm,
-                    color: tokens.colors.text.secondary,
-                    lineHeight: 1.5,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    letterSpacing: tokens.typography.letterSpacing.wide,
+                    textTransform: 'uppercase',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    cursor: busy ? 'not-allowed' : 'pointer',
+                    opacity: busy ? 0.5 : 1,
+                    border: 'none',
+                    borderRadius: tokens.radius.md,
+                    background: tokens.colors.accent.gradient,
+                    color: '#ffffff',
+                    boxShadow: tokens.shadow.glow,
                 }}
             >
-                Keine Apple-Health-Daten gefunden. Exportiere aus der iOS-Health-App
-                (Profil → Daten exportieren) und entpacke das ZIP nach
-                <code
-                    style={{
-                        marginLeft: 6,
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        background: tokens.colors.surface.glass,
-                        fontFamily: tokens.typography.fontFamily.mono,
-                        fontSize: tokens.typography.fontSize.xs,
-                    }}
-                >
-                    ~/apple_health_export/Export.xml
-                </code>
-                .
-            </p>
+                <Link2 size={14} strokeWidth={2.5} />
+                {busy ? 'Öffne Browser…' : 'COROS verbinden'}
+            </button>
         </div>
     );
 }
@@ -583,7 +625,7 @@ function ErrorCard() {
                     color: tokens.colors.status.danger,
                 }}
             >
-                Beim Import gab es einen Fehler. Versuche „Reimport".
+                Beim Abruf der COROS-Daten gab es einen Fehler. Versuche „Sync".
             </p>
         </div>
     );
@@ -617,7 +659,12 @@ function formatHours(min) {
     return m === 0 ? `${h}h` : `${h}h ${String(m).padStart(2, '0')}m`;
 }
 
-function formatNumber(n) {
-    if (n == null) return '—';
-    return new Intl.NumberFormat('de-DE').format(n);
+function fmtSync(iso) {
+    const d = new Date(iso);
+    const diffMin = Math.round((Date.now() - d.getTime()) / 60000);
+    if (diffMin < 1) return 'gerade eben';
+    if (diffMin < 60) return `vor ${diffMin}m`;
+    const diffH = Math.round(diffMin / 60);
+    if (diffH < 24) return `vor ${diffH}h`;
+    return d.toLocaleDateString('de-DE');
 }

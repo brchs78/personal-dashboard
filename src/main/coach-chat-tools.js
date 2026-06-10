@@ -8,6 +8,7 @@ const calendarCaldav = require('./calendar-caldav.js');
 const habitStore = require('./habit-store.js');
 const stravaClient = require('./strava-client.js');
 const stravaStore = require('./strava-store.js');
+const corosStore = require('./coros-store.js');
 
 const TOOLS = [
     {
@@ -84,7 +85,7 @@ const TOOLS = [
     },
     {
         name: 'get_recovery_status',
-        description: 'Hole den aktuellen Recovery-Snapshot (RHR, HRV, Schlaf, HR-Recovery 1min). Liefert null wenn keine Health-Daten verfügbar.',
+        description: 'Hole den aktuellen COROS-Health-Snapshot (RHR, HRV, Recovery-Score, Schlaf inkl. Stages, VO2max, Training-Load). Liefert null wenn COROS nicht verbunden / keine Daten verfügbar.',
         input_schema: { type: 'object', properties: {} },
     },
     {
@@ -235,7 +236,7 @@ function getStravaCreds() {
 }
 
 async function dispatch(name, input, ctx = {}) {
-    const { getHealthSummary, broadcastTodos, broadcastCalendar, refreshCalendar } = ctx;
+    const { broadcastTodos, broadcastCalendar, refreshCalendar } = ctx;
     const args = input || {};
     switch (name) {
         case 'list_todos': {
@@ -292,18 +293,21 @@ async function dispatch(name, input, ctx = {}) {
             return day || null;
         }
         case 'get_recovery_status': {
-            const summary = getHealthSummary?.();
-            if (!summary?.latest) return null;
-            const l = summary.latest;
+            const cache = corosStore.loadCache();
+            const l = cache?.latest;
+            if (!l) return null;
             return {
-                rhr: l.rhr ? { value: l.rhr.value, date: l.rhr.date } : null,
-                hrv: l.hrv ? { value: l.hrv.value, date: l.hrv.date } : null,
-                hrRecovery: l.hrRecovery ? { value: l.hrRecovery.value, date: l.hrRecovery.date } : null,
+                rhr:          l.rhr ? { value: l.rhr.value, date: l.rhr.date } : null,
+                hrv:          l.hrv ? { value: l.hrv.value, date: l.hrv.date } : null,
+                recovery:     l.recovery ? { value: l.recovery.value, date: l.recovery.date } : null,
+                vo2max:       l.vo2max ? { value: l.vo2max.value, date: l.vo2max.date } : null,
+                trainingLoad: l.trainingLoad ? { value: l.trainingLoad.value, date: l.trainingLoad.date } : null,
                 sleep: l.sleep ? {
                     totalMin: l.sleep.totalMin,
                     date: l.sleep.date,
                     stages: l.sleep.stages || null,
                 } : null,
+                syncedAt: cache?.meta?.syncedAt || null,
             };
         }
         case 'list_calendar_events': {

@@ -19,6 +19,7 @@
         "vite": "^4.5.3"
     },
     "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.29.0",
         "clsx": "^2.1.1",
         "dotenv": "^17.4.2",
         "framer-motion": "^12.40.0",

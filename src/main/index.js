@@ -5,6 +5,7 @@ const { app, BrowserWindow, globalShortcut, Tray, Menu,
 const path = require('path')
 const healthIPC = require('./health-ipc.js')
 const stravaIPC = require('./strava-ipc.js')
+const corosIPC = require('./coros-ipc.js')
 const coachPlanIPC = require('./coach-plan-ipc.js')
 const todoIPC = require('./todo-ipc.js')
 const coachChatIPC = require('./coach-chat-ipc.js')
@@ -144,6 +145,7 @@ app.whenReady().then(() => {
     createWindow(); registerHotkey(); createTray(); startScheduler(vaultDeps)
     healthIPC.init(() => mainWindow)
     stravaIPC.init(() => mainWindow)
+    corosIPC.init(() => mainWindow)
     coachPlanIPC.init(() => mainWindow, {
         getHealthSummary: healthIPC.getCurrentSummary,
         getHealthTrend: healthIPC.getTrend,

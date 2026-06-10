@@ -28,6 +28,16 @@ contextBridge.exposeInMainWorld('oleAPI', {
         onStatus:       (cb) => on('strava:status', cb),
         onActivities:   (cb) => on('strava:activities', cb),
     },
+    coros: {
+        status:      () => ipcRenderer.invoke('coros:status'),
+        connect:     () => ipcRenderer.invoke('coros:connect'),
+        disconnect:  () => ipcRenderer.invoke('coros:disconnect'),
+        getSummary:  () => ipcRenderer.invoke('coros:get-summary'),
+        getTrends:   (metric, days) => ipcRenderer.invoke('coros:get-trends', { metric, days }),
+        refresh:     () => ipcRenderer.invoke('coros:refresh'),
+        onStatus:    (cb) => on('coros:status', cb),
+        onReady:     (cb) => on('coros:ready', cb),
+    },
     plan: {
         getCurrent:    () => ipcRenderer.invoke('plan:get-current'),
         generate:      (opts) => ipcRenderer.invoke('plan:generate', opts),
