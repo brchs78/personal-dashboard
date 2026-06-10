@@ -109,6 +109,7 @@ contextBridge.exposeInMainWorld('oleAPI', {
         applyConsumption:(reductions) => ipcRenderer.invoke('kitchen:apply-consumption', reductions),
         macroProfileUpdate: (category, patch) => ipcRenderer.invoke('kitchen:macro-profile-update', { category, patch }),
         macroOverride:   (date, macros) => ipcRenderer.invoke('kitchen:macro-override', { date, macros }),
+        dayplanGenerate: (opts) => ipcRenderer.invoke('kitchen:dayplan-generate', opts),
         onUpdated:       (cb) => on('kitchen:updated', cb),
     },
     calendar: {

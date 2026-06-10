@@ -94,13 +94,29 @@ export function useKitchen() {
     const updateMacroProfile = useCallback((category, patch) => api()?.macroProfileUpdate(category, patch), []);
     const setMacroOverride = useCallback((date, macros) => api()?.macroOverride(date, macros), []);
 
+    // ── Tagesplan ─────────────────────────────────────────────────────
+    const generateDayPlan = useCallback(async (opts = {}) => {
+        const a = api(); if (!a) return null;
+        const apiKey = getKey();
+        if (!apiKey) { setError('Kein API-Key in Settings hinterlegt'); return null; }
+        setBusy(true); setError(null);
+        try {
+            return await a.dayplanGenerate({ apiKey, ...opts });
+        } catch (e) {
+            setError(String(e?.message || e));
+            return null;
+        } finally {
+            setBusy(false);
+        }
+    }, []);
+
     return {
         data, costs, busy, error,
         invAdd, invUpdate, invRemove, invConsume,
         mealAdd, mealUpdate, mealRemove,
         importReceipt, confirmImport,
         generateRecipe, saveRecipe, updateRecipe, removeRecipe, applyConsumption,
-        updateMacroProfile, setMacroOverride,
+        updateMacroProfile, setMacroOverride, generateDayPlan,
     };
 }
 

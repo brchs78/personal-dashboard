@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, Trash2, X, Check, Minus, Upload, ChefHat, Receipt,
     Utensils, Wallet, Target, Loader2, Sparkles, Save, AlertCircle,
+    Sun, Coffee, Sandwich, UtensilsCrossed, Apple,
 } from 'lucide-react';
 import { useKitchen, categoryForType } from '../hooks/useKitchen';
 import { useTrainingPlan } from '../hooks/useTrainingPlan';
@@ -30,11 +31,15 @@ function fmtWeek(iso) {
 }
 
 const SUBTABS = [
+    { id: 'heute', label: 'Heute', icon: Sun },
     { id: 'inventar', label: 'Inventar', icon: Utensils },
     { id: 'kosten', label: 'Kosten', icon: Wallet },
     { id: 'rezepte', label: 'Rezepte', icon: ChefHat },
     { id: 'makros', label: 'Makros', icon: Target },
 ];
+
+const MEAL_TYPES = ['Frühstück', 'Mittagessen', 'Abendessen', 'Snack'];
+const MEAL_ICONS = { 'Frühstück': Coffee, 'Mittagessen': Sandwich, 'Abendessen': UtensilsCrossed, 'Snack': Apple };
 
 export default function Kitchen() {
     const { tokens } = useTheme();
@@ -87,10 +92,244 @@ export default function Kitchen() {
                 })}
             </div>
 
+            {sub === 'heute' && <Heute k={k} plan={plan} acc={acc} />}
             {sub === 'inventar' && <Inventar k={k} acc={acc} />}
             {sub === 'kosten' && <Kosten k={k} acc={acc} />}
             {sub === 'rezepte' && <Rezepte k={k} plan={plan} acc={acc} />}
             {sub === 'makros' && <Makros k={k} plan={plan} acc={acc} />}
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────
+// HEUTE — Tagesüberblick + Essensvorschläge
+// ─────────────────────────────────────────────────────────────
+function Heute({ k, plan, acc }) {
+    const { tokens } = useTheme();
+    const today = todayISO();
+    const todayMeals = (k.data.externalMeals || []).filter((m) => m.date === today);
+    const info = dayMacros(plan, k.data, today);
+
+    // Summe heutiger Mahlzeiten
+    const eaten = todayMeals.reduce(
+        (s, m) => ({ kcal: s.kcal + (m.kcal||0), protein: s.protein + (m.protein||0), carbs: s.carbs + (m.carbs||0), fat: s.fat + (m.fat||0) }),
+        { kcal: 0, protein: 0, carbs: 0, fat: 0 }
+    );
+    const target = info.macros;
+
+    const [showForm, setShowForm] = useState(false);
+    const [dayPlan, setDayPlan] = useState(null);
+    const [planBusy, setPlanBusy] = useState(false);
+
+    async function handleGenPlan() {
+        setPlanBusy(true); setDayPlan(null);
+        const result = await k.generateDayPlan({
+            macroTarget: target,
+            trainingLabel: info.label,
+            alreadyEaten: eaten.kcal > 0 ? eaten : null,
+        });
+        setDayPlan(result);
+        setPlanBusy(false);
+    }
+
+    function addFromSuggestion(meal) {
+        k.mealAdd({
+            name: meal.title,
+            kcal: meal.macros.kcal,
+            protein: meal.macros.protein,
+            carbs: meal.macros.carbs,
+            fat: meal.macros.fat,
+            cost: null,
+            date: today,
+            source: 'vorschlag',
+            mealType: meal.type,
+        });
+    }
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.lg }}>
+            {/* Makro-Fortschritt */}
+            <div style={{ ...tokens.glass.card, padding: tokens.spacing.lg, display: 'flex', flexDirection: 'column', gap: tokens.spacing.md }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <SectionLabel acc={acc}>Heute · {info.type}</SectionLabel>
+                    <span style={{ fontSize: tokens.typography.fontSize.xs, color: tokens.colors.text.tertiary }}>
+                        Ziel: {target.kcal} kcal
+                    </span>
+                </div>
+                <MacroBar label="Kalorien" eaten={eaten.kcal} target={target.kcal} unit="kcal" color={acc} tokens={tokens} big />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: tokens.spacing.sm }}>
+                    <MacroBar label="Protein" eaten={eaten.protein} target={target.protein} unit="g" color={tokens.colors.status.info} tokens={tokens} />
+                    <MacroBar label="Kohlenhydrate" eaten={eaten.carbs} target={target.carbs} unit="g" color={tokens.colors.status.warning} tokens={tokens} />
+                    <MacroBar label="Fett" eaten={eaten.fat} target={target.fat} unit="g" color={tokens.colors.status.success} tokens={tokens} />
+                </div>
+            </div>
+
+            {/* Heutige Mahlzeiten */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <SectionLabel acc={acc}>Mahlzeiten heute</SectionLabel>
+                    <ActionBtn acc={acc} ghost icon={Plus} onClick={() => setShowForm(true)}>Erfassen</ActionBtn>
+                </div>
+                {todayMeals.length === 0
+                    ? <SoftEmpty label="Noch keine Mahlzeiten erfasst." />
+                    : todayMeals.map((m) => <TodayMealRow key={m.id} meal={m} acc={acc} onRemove={() => k.mealRemove(m.id)} tokens={tokens} />)
+                }
+            </div>
+
+            {showForm && (
+                <MealLogForm
+                    acc={acc}
+                    onSave={(data) => { k.mealAdd({ ...data, date: today, source: 'manuell' }); setShowForm(false); }}
+                    onCancel={() => setShowForm(false)}
+                />
+            )}
+
+            {/* Tagesvorschläge */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <SectionLabel acc={acc}>Tagesplan vorschlagen</SectionLabel>
+                    <ActionBtn acc={acc} icon={Sparkles} onClick={handleGenPlan} disabled={planBusy}
+                        spin={planBusy}>{planBusy ? 'Generiere…' : 'KI-Vorschlag'}</ActionBtn>
+                </div>
+                {dayPlan && dayPlan.meals.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm }}>
+                        {dayPlan.meals.map((meal, i) => (
+                            <DayPlanMealCard key={i} meal={meal} acc={acc} tokens={tokens}
+                                onAdd={() => addFromSuggestion(meal)} />
+                        ))}
+                    </div>
+                )}
+                {dayPlan && dayPlan.meals.length === 0 && <SoftEmpty label="Keine Vorschläge erhalten." />}
+            </div>
+        </div>
+    );
+}
+
+// Fortschrittsbalken für eine Makro-Kategorie
+function MacroBar({ label, eaten, target, unit, color, tokens, big }) {
+    const pct = target > 0 ? Math.min(100, Math.round((eaten / target) * 100)) : 0;
+    const over = target > 0 && eaten > target;
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: big ? tokens.typography.fontSize.sm : 10, color: tokens.colors.text.secondary, fontWeight: tokens.typography.fontWeight.medium }}>{label}</span>
+                <span style={{ fontSize: big ? tokens.typography.fontSize.sm : 10, color: over ? tokens.colors.status.danger : tokens.colors.text.secondary, fontVariantNumeric: 'tabular-nums' }}>
+                    {eaten} / {target} {unit}
+                </span>
+            </div>
+            <div style={{ height: big ? 8 : 5, background: tokens.colors.border.glass, borderRadius: tokens.radius.full, overflow: 'hidden' }}>
+                <div style={{
+                    height: '100%', width: `${pct}%`,
+                    background: over ? tokens.colors.status.danger : color,
+                    borderRadius: tokens.radius.full,
+                    transition: 'width 0.4s ease',
+                }} />
+            </div>
+        </div>
+    );
+}
+
+// Eine Mahlzeit-Zeile im Tagesüberblick
+function TodayMealRow({ meal, acc, onRemove, tokens }) {
+    const MealIcon = MEAL_ICONS[meal.mealType] || Utensils;
+    return (
+        <div style={{ ...tokens.glass.card, padding: `${tokens.spacing.sm} ${tokens.spacing.md}`, display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
+            <MealIcon size={16} color={acc} strokeWidth={2} style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: tokens.typography.fontSize.sm, fontWeight: tokens.typography.fontWeight.medium, color: tokens.colors.text.primary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {meal.name}
+                </p>
+                {meal.mealType && <p style={{ margin: 0, fontSize: 10, color: tokens.colors.text.tertiary }}>{meal.mealType}</p>}
+            </div>
+            <span style={{ fontSize: tokens.typography.fontSize.xs, color: tokens.colors.text.secondary, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                {meal.kcal} kcal · P{meal.protein} K{meal.carbs} F{meal.fat}
+            </span>
+            {meal.cost != null && <span style={{ fontSize: tokens.typography.fontSize.xs, color: tokens.colors.text.tertiary, flexShrink: 0 }}>{eur(meal.cost)}</span>}
+            <IconBtn onClick={onRemove} color={tokens.colors.text.tertiary} title="Entfernen"><X size={13} /></IconBtn>
+        </div>
+    );
+}
+
+// Formular zum schnellen Erfassen einer Mahlzeit
+function MealLogForm({ acc, onSave, onCancel }) {
+    const { tokens } = useTheme();
+    const [form, setForm] = useState({ name: '', mealType: 'Frühstück', kcal: '', protein: '', carbs: '', fat: '', cost: '' });
+    const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+    const num = (v) => v === '' ? null : (Number(v) || 0);
+    const valid = form.name.trim() && form.kcal !== '';
+
+    return (
+        <div style={{ ...tokens.glass.card, padding: tokens.spacing.md, display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm, borderLeft: `3px solid ${acc}` }}>
+            <p style={{ margin: 0, fontSize: tokens.typography.fontSize.sm, fontWeight: tokens.typography.fontWeight.semibold, color: tokens.colors.text.primary }}>Mahlzeit erfassen</p>
+            <div style={{ display: 'flex', gap: tokens.spacing.sm, flexWrap: 'wrap' }}>
+                <input placeholder="Name" value={form.name} onChange={(e) => set('name', e.target.value)}
+                    style={{ ...tokens.glass.input, padding: '6px 10px', flex: 2, minWidth: 140, fontSize: tokens.typography.fontSize.sm, outline: 'none' }} />
+                <select value={form.mealType} onChange={(e) => set('mealType', e.target.value)}
+                    style={{ ...tokens.glass.input, padding: '6px 10px', flex: 1, minWidth: 120, fontSize: tokens.typography.fontSize.sm, outline: 'none', cursor: 'pointer' }}>
+                    {MEAL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+            </div>
+            <div style={{ display: 'flex', gap: tokens.spacing.xs, flexWrap: 'wrap' }}>
+                {[['kcal','Kkal'],['protein','P (g)'],['carbs','K (g)'],['fat','F (g)'],['cost','Kosten €']].map(([key, ph]) => (
+                    <input key={key} type="number" placeholder={ph} value={form[key]}
+                        onChange={(e) => set(key, e.target.value)}
+                        style={{ ...tokens.glass.input, padding: '6px 8px', width: 76, fontSize: tokens.typography.fontSize.xs, outline: 'none', textAlign: 'center' }} />
+                ))}
+            </div>
+            <div style={{ display: 'flex', gap: tokens.spacing.sm }}>
+                <ActionBtn acc={acc} icon={Check} disabled={!valid}
+                    onClick={() => onSave({ name: form.name.trim(), mealType: form.mealType, kcal: num(form.kcal), protein: num(form.protein)||0, carbs: num(form.carbs)||0, fat: num(form.fat)||0, cost: num(form.cost) })}>
+                    Speichern
+                </ActionBtn>
+                <ActionBtn acc={acc} ghost icon={X} onClick={onCancel}>Abbrechen</ActionBtn>
+            </div>
+        </div>
+    );
+}
+
+// KI-Mahlzeit-Vorschlag aus Tagesplan
+function DayPlanMealCard({ meal, acc, tokens, onAdd }) {
+    const [open, setOpen] = useState(false);
+    const MealIcon = MEAL_ICONS[meal.type] || Utensils;
+    return (
+        <div style={{ ...tokens.glass.card, padding: tokens.spacing.md, display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.sm }}>
+                <MealIcon size={16} color={acc} strokeWidth={2} style={{ flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: 10, color: tokens.colors.text.tertiary, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{meal.type}</span>
+                    <p style={{ margin: 0, fontSize: tokens.typography.fontSize.sm, fontWeight: tokens.typography.fontWeight.semibold, color: tokens.colors.text.primary }}>{meal.title}</p>
+                </div>
+                <span style={{ fontSize: tokens.typography.fontSize.xs, color: tokens.colors.text.secondary, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                    {meal.macros.kcal} kcal
+                </span>
+                <span style={{ fontSize: tokens.typography.fontSize.xs, color: tokens.colors.text.tertiary, flexShrink: 0 }}>
+                    P{meal.macros.protein} K{meal.macros.carbs} F{meal.macros.fat}
+                </span>
+                <IconBtn onClick={() => setOpen((o) => !o)} color={tokens.colors.text.tertiary} title="Details">{open ? <Minus size={13}/> : <Plus size={13}/>}</IconBtn>
+                <ActionBtn acc={acc} icon={Plus} onClick={onAdd}>Erfassen</ActionBtn>
+            </div>
+            {open && (
+                <div style={{ paddingLeft: 24, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {meal.prep && <p style={{ margin: 0, fontSize: tokens.typography.fontSize.xs, color: tokens.colors.text.secondary }}>{meal.prep}</p>}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {meal.ingredients.map((ing, i) => (
+                            <span key={i} style={{
+                                fontSize: 10, padding: '2px 8px', borderRadius: tokens.radius.full,
+                                background: ing.inInventory ? `${acc}20` : tokens.colors.border.glass,
+                                color: ing.inInventory ? acc : tokens.colors.text.tertiary,
+                                border: `1px solid ${ing.inInventory ? `${acc}40` : tokens.colors.border.glass}`,
+                            }}>
+                                {ing.qty} {ing.unit} {ing.name}
+                            </span>
+                        ))}
+                    </div>
+                    {meal.missing.length > 0 && (
+                        <p style={{ margin: 0, fontSize: 10, color: tokens.colors.status.warning }}>
+                            Fehlt: {meal.missing.join(', ')}
+                        </p>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
@@ -546,9 +785,14 @@ function DayMacroRow({ day, info, overridden, acc, onOverride, onReset }) {
                 </div>
             ) : (
                 <>
-                    <span style={{ flex: 1, fontSize: tokens.typography.fontSize.sm, color: tokens.colors.text.secondary, fontVariantNumeric: 'tabular-nums' }}>
-                        {info.macros.kcal} kcal · P{info.macros.protein} K{info.macros.carbs} F{info.macros.fat}
-                    </span>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ margin: 0, fontSize: tokens.typography.fontSize.sm, fontWeight: tokens.typography.fontWeight.semibold, color: tokens.colors.text.primary, fontVariantNumeric: 'tabular-nums' }}>
+                            {info.macros.kcal} kcal
+                        </p>
+                        <p style={{ margin: 0, fontSize: 10, color: tokens.colors.text.tertiary, fontVariantNumeric: 'tabular-nums' }}>
+                            P{info.macros.protein} · K{info.macros.carbs} · F{info.macros.fat}
+                        </p>
+                    </div>
                     {overridden && <IconBtn title="Auf Default zurücksetzen" onClick={onReset} color={tokens.colors.text.tertiary}><X size={13} /></IconBtn>}
                     <button type="button" onClick={() => { setM(info.macros); setEdit(true); }} style={{
                         background: 'transparent', border: `1px solid ${tokens.colors.border.glass}`, borderRadius: tokens.radius.sm,

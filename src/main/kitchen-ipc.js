@@ -66,6 +66,13 @@ function init(getWindow) {
     // Meal-Prep: bestätigte Inventar-Reduktionen anwenden.
     ipcMain.handle('kitchen:apply-consumption', (_e, reductions) => emit(store.applyConsumption(reductions)));
 
+    // ── Tagesplan ─────────────────────────────────────────────────────
+    ipcMain.handle('kitchen:dayplan-generate', async (_e, opts = {}) => {
+        const { apiKey, macroTarget, trainingLabel, alreadyEaten } = opts;
+        const inventory = store.loadAll().inventory;
+        return ai.generateDayPlan({ apiKey, inventory, macroTarget, trainingLabel, alreadyEaten });
+    });
+
     // ── Makro-Profile & Overrides ─────────────────────────────────────
     ipcMain.handle('kitchen:macro-profile-update', (_e, { category, patch } = {}) =>
         emit(store.updateMacroProfile(category, patch))

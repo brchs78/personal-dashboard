@@ -117,4 +117,60 @@ Gib NUR JSON zurück, Schema:
     };
 }
 
-module.exports = { parseReceipt, generateRecipe };
+// Generiert einen Tagesplan (Frühstück/Mittag/Abend/Snack) aus Inventar +
+// Tagesziel + bereits gegessenen Makros.
+async function generateDayPlan({ apiKey, inventory = [], macroTarget = {}, trainingLabel = '', alreadyEaten = null }) {
+    const invList = inventory.length
+        ? inventory.map((i) => `- ${i.name}: ${i.qty} ${i.unit}`).join('\n')
+        : '(Inventar leer)';
+    const mt = macroTarget || {};
+    const eaten = alreadyEaten
+        ? `Bereits gegessen: ${alreadyEaten.kcal} kcal, ${alreadyEaten.protein}g P, ${alreadyEaten.carbs}g K, ${alreadyEaten.fat}g F`
+        : 'Noch nichts gegessen heute.';
+    const remaining = alreadyEaten
+        ? `Verbleibend: ${Math.max(0,(mt.kcal||0)-(alreadyEaten.kcal||0))} kcal, ${Math.max(0,(mt.protein||0)-(alreadyEaten.protein||0))}g P, ${Math.max(0,(mt.carbs||0)-(alreadyEaten.carbs||0))}g K, ${Math.max(0,(mt.fat||0)-(alreadyEaten.fat||0))}g F`
+        : `Tagesziel: ${mt.kcal ?? '?'} kcal, ${mt.protein ?? '?'}g P, ${mt.carbs ?? '?'}g K, ${mt.fat ?? '?'}g F`;
+
+    const system = `Du bist Oles Ernährungs-Coach (Ausdauerathlet, 72kg, Marathon-Training).
+Erstelle einen praktischen Tagesernährungsplan mit 3–4 Mahlzeiten, der das Makroziel trifft.
+Nutze vorrangig verfügbares Inventar. Zutaten außerhalb des Inventars in "missing" angeben.
+Antworte deutsch, knapp. Mahlzeiten realistisch und schnell zuzubereiten.`;
+
+    const userText = `INVENTAR:
+${invList}
+
+TRAININGSTAG: ${trainingLabel || 'kein Kontext'}
+${eaten}
+${remaining}
+
+Gib NUR JSON zurück. Schema:
+{
+  "meals": [
+    {
+      "type": "Frühstück" | "Mittagessen" | "Abendessen" | "Snack",
+      "title": string,
+      "ingredients": [ { "name": string, "qty": number, "unit": string, "inInventory": boolean } ],
+      "missing": [ string ],
+      "macros": { "kcal": number, "protein": number, "carbs": number, "fat": number },
+      "prep": string
+    }
+  ]
+}`;
+
+    const messages = [{ role: 'user', content: userText }];
+    const text = await callAnthropic({ apiKey, messages, maxTokens: 3000, system });
+    const parsed = extractJSON(text);
+    const meals = Array.isArray(parsed.meals) ? parsed.meals : [];
+    return {
+        meals: meals.map((m) => ({
+            type: String(m.type || 'Mahlzeit'),
+            title: String(m.title || 'Mahlzeit'),
+            ingredients: Array.isArray(m.ingredients) ? m.ingredients : [],
+            missing: Array.isArray(m.missing) ? m.missing : [],
+            macros: m.macros || { kcal: 0, protein: 0, carbs: 0, fat: 0 },
+            prep: String(m.prep || ''),
+        })),
+    };
+}
+
+module.exports = { parseReceipt, generateRecipe, generateDayPlan };
