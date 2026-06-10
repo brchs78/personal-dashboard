@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, Trash2, X, Check, Minus, Upload, ChefHat, Receipt,
     Utensils, Wallet, Target, Loader2, Sparkles, Save, AlertCircle,
-    Sun, Coffee, Sandwich, UtensilsCrossed, Apple,
+    Sun, Coffee, Sandwich, UtensilsCrossed, Apple, Boxes, ShoppingCart, CalendarDays,
 } from 'lucide-react';
 import { useKitchen, categoryForType } from '../hooks/useKitchen';
 import { useTrainingPlan } from '../hooks/useTrainingPlan';
@@ -601,6 +601,9 @@ function Rezepte({ k, plan, acc }) {
     const [servings, setServings] = useState(1);
     const [mealType, setMealType] = useState('');
     const [draft, setDraft] = useState(null);
+    const [prepDays, setPrepDays] = useState(3);
+    const [prepMeals, setPrepMeals] = useState(['Mittagessen', 'Abendessen']);
+    const [prepPlan, setPrepPlan] = useState(null);
 
     async function onGenerate() {
         const r = await k.generateRecipe({
@@ -610,6 +613,43 @@ function Rezepte({ k, plan, acc }) {
             mealType,
         });
         if (r) setDraft(r);
+    }
+
+    function toggleMeal(m) {
+        setPrepMeals((cur) => cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m]);
+    }
+
+    async function onGenPrep() {
+        const days = [];
+        for (let i = 0; i < prepDays; i++) {
+            const date = addDays(today, i);
+            const info = dayMacros(plan, k.data, date);
+            days.push({ date, label: info.label, macroTarget: info.macros });
+        }
+        const r = await k.generatePrepPlan({ days, mealTypes: prepMeals });
+        if (r) setPrepPlan(r);
+    }
+
+    async function confirmPrep() {
+        for (const s of prepPlan.schedule) {
+            await k.mealAdd({ name: s.batch, mealType: s.mealType, kcal: s.macros.kcal,
+                protein: s.macros.protein, carbs: s.macros.carbs, fat: s.macros.fat,
+                cost: null, date: s.date, source: 'prep' });
+        }
+        // Inventar-Abzug: Batch-Zutaten auf Inventar matchen, Mengen je id summieren.
+        const byId = {};
+        for (const b of prepPlan.batches) {
+            for (const ing of b.ingredients) {
+                if (ing.inInventory === false) continue;
+                const inv = k.data.inventory.find((i) =>
+                    i.name.toLowerCase().includes(String(ing.name).toLowerCase()) ||
+                    String(ing.name).toLowerCase().includes(i.name.toLowerCase()));
+                if (inv) byId[inv.id] = (byId[inv.id] || 0) + (Number(ing.qty) || 0);
+            }
+        }
+        const reductions = Object.entries(byId).map(([id, amount]) => ({ id, amount }));
+        if (reductions.length) await k.applyConsumption(reductions);
+        setPrepPlan(null);
     }
 
     return (
@@ -637,6 +677,48 @@ function Rezepte({ k, plan, acc }) {
                     onSave={async () => { await k.saveRecipe(draft); setDraft(null); }}
                     onDiscard={() => setDraft(null)}
                     onChange={setDraft} />
+            )}
+
+            {/* Meal-Prep planen */}
+            <div style={{ ...tokens.glass.card, padding: tokens.spacing.md, display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.xs }}>
+                    <Boxes size={15} color={acc} />
+                    <SectionLabel acc={acc}>Meal-Prep planen</SectionLabel>
+                </div>
+                <p style={{ margin: 0, fontSize: tokens.typography.fontSize.xs, color: tokens.colors.text.secondary }}>
+                    Batch-Kochen für mehrere Tage — Portionen pro Trainingstag, Einkaufsliste für Fehlendes.
+                </p>
+                <div style={{ display: 'flex', gap: tokens.spacing.sm, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <label style={{ fontSize: tokens.typography.fontSize.xs, color: tokens.colors.text.tertiary, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <CalendarDays size={13} /> Tage ab heute
+                    </label>
+                    <input type="number" min={1} max={7} value={prepDays}
+                        onChange={(e) => setPrepDays(Math.max(1, Math.min(7, Number(e.target.value) || 1)))}
+                        style={{ ...tokens.glass.input, padding: '6px 10px', width: 56, fontSize: tokens.typography.fontSize.sm, outline: 'none' }} />
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {MEAL_TYPES.map((m) => {
+                            const on = prepMeals.includes(m);
+                            return (
+                                <button key={m} type="button" onClick={() => toggleMeal(m)} style={{
+                                    padding: '5px 10px', fontSize: tokens.typography.fontSize.xs, cursor: 'pointer',
+                                    borderRadius: tokens.radius.pill, border: `1px solid ${on ? acc : tokens.colors.border.glass}`,
+                                    background: on ? `${acc}22` : 'transparent', color: on ? acc : tokens.colors.text.tertiary,
+                                    fontWeight: on ? tokens.typography.fontWeight.semibold : tokens.typography.fontWeight.normal,
+                                }}>{m}</button>
+                            );
+                        })}
+                    </div>
+                    <div style={{ flex: 1 }} />
+                    <ActionBtn acc={acc} onClick={onGenPrep} disabled={k.busy || !prepMeals.length}
+                        icon={k.busy ? Loader2 : Sparkles} spin={k.busy}>
+                        {k.busy ? 'Plane…' : 'Prep-Plan'}
+                    </ActionBtn>
+                </div>
+            </div>
+
+            {prepPlan && (
+                <PrepPlanResult plan={prepPlan} acc={acc} tokens={tokens}
+                    onConfirm={confirmPrep} onDiscard={() => setPrepPlan(null)} />
             )}
 
             {k.data.recipes.length > 0 && <SectionLabel acc={acc}>Gespeichert</SectionLabel>}
@@ -735,6 +817,97 @@ function RecipeCard({ recipe, acc, draft, inventory = [], onSave, onDiscard, onC
                     )}
                 </div>
             )}
+        </div>
+    );
+}
+
+function PrepPlanResult({ plan, acc, tokens, onConfirm, onDiscard }) {
+    const [busy, setBusy] = useState(false);
+    const fmtDay = (iso) => {
+        const d = new Date(iso + 'T00:00:00');
+        return `${DOW[d.getDay()]} ${d.getDate()}.`;
+    };
+    // Schedule nach Datum gruppieren.
+    const byDate = useMemo(() => {
+        const map = {};
+        for (const s of plan.schedule) (map[s.date] = map[s.date] || []).push(s);
+        return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+    }, [plan.schedule]);
+    const shopTotal = plan.shoppingList.reduce((s, i) => s + (Number(i.estPrice) || 0), 0);
+
+    async function confirm() { setBusy(true); await onConfirm(); setBusy(false); }
+
+    return (
+        <div style={{ ...tokens.glass.card, padding: tokens.spacing.md, display: 'flex', flexDirection: 'column', gap: tokens.spacing.md, borderLeft: `3px solid ${acc}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.xs }}>
+                <Boxes size={16} color={acc} />
+                <h3 style={{ margin: 0, fontSize: tokens.typography.fontSize.md, fontWeight: tokens.typography.fontWeight.bold, color: tokens.colors.text.primary }}>Prep-Plan</h3>
+            </div>
+
+            {/* Batch-Gerichte */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.sm }}>
+                {plan.batches.map((b, i) => (
+                    <div key={i} style={{ ...tokens.glass.input, padding: tokens.spacing.sm, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: tokens.spacing.sm }}>
+                            <span style={{ fontSize: tokens.typography.fontSize.sm, fontWeight: tokens.typography.fontWeight.bold, color: tokens.colors.text.primary }}>{b.title}</span>
+                            <span style={{ fontSize: tokens.typography.fontSize.xs, color: tokens.colors.text.tertiary }}>
+                                {b.portions} Portionen · {b.macrosPerPortion.kcal} kcal/P · P{b.macrosPerPortion.protein} K{b.macrosPerPortion.carbs} F{b.macrosPerPortion.fat}
+                            </span>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 10px' }}>
+                            {b.ingredients.map((ing, j) => (
+                                <span key={j} style={{ fontSize: tokens.typography.fontSize.xs, color: ing.inInventory === false ? tokens.colors.status.warning : tokens.colors.text.secondary }}>
+                                    {ing.qty} {ing.unit} {ing.name}{ing.inInventory === false ? ' (kaufen)' : ''}
+                                </span>
+                            ))}
+                        </div>
+                        {b.steps?.length > 0 && (
+                            <ol style={{ margin: '2px 0 0', paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                {b.steps.map((s, j) => <li key={j} style={{ fontSize: tokens.typography.fontSize.xs, color: tokens.colors.text.secondary }}>{s}</li>)}
+                            </ol>
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            {/* Tageszuordnung */}
+            {byDate.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <SectionLabel acc={acc}>Verteilung</SectionLabel>
+                    {byDate.map(([date, list]) => (
+                        <div key={date} style={{ display: 'flex', gap: tokens.spacing.sm, alignItems: 'baseline', fontSize: tokens.typography.fontSize.sm }}>
+                            <span style={{ width: 48, flexShrink: 0, fontWeight: tokens.typography.fontWeight.semibold, color: acc }}>{fmtDay(date)}</span>
+                            <span style={{ color: tokens.colors.text.secondary }}>
+                                {list.map((s) => `${s.mealType}: ${s.batch} (${s.portions}×, ${s.macros.kcal} kcal)`).join(' · ')}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Einkaufsliste */}
+            {plan.shoppingList.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacing.xs }}>
+                        <ShoppingCart size={13} color={acc} />
+                        <SectionLabel acc={acc}>Einkaufsliste{shopTotal > 0 ? ` · ~${shopTotal.toFixed(2)} €` : ''}</SectionLabel>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px' }}>
+                        {plan.shoppingList.map((i, j) => (
+                            <span key={j} style={{ fontSize: tokens.typography.fontSize.sm, color: tokens.colors.text.secondary }}>
+                                · {i.qty} {i.unit} {i.name}{i.estPrice ? ` (~${Number(i.estPrice).toFixed(2)} €)` : ''}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <div style={{ display: 'flex', gap: tokens.spacing.sm, justifyContent: 'flex-end' }}>
+                <ActionBtn ghost acc={acc} onClick={onDiscard} icon={X} disabled={busy}>Verwerfen</ActionBtn>
+                <ActionBtn acc={acc} onClick={confirm} icon={busy ? Loader2 : Check} spin={busy} disabled={busy}>
+                    {busy ? 'Übernehme…' : 'Übernehmen (Mahlzeiten + Inventar-Abzug)'}
+                </ActionBtn>
+            </div>
         </div>
     );
 }
@@ -844,7 +1017,7 @@ function ProfileRow({ cat, profile, acc, onCommit }) {
 // ─────────────────────────────────────────────────────────────
 function addDays(iso, n) {
     const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n);
-    return d.toISOString().slice(0, 10);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function scaleMacro(m, s) {

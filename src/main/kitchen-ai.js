@@ -181,6 +181,78 @@ Gib NUR JSON zurück. Schema:
     };
 }
 
+// Generiert einen Meal-Prep-Plan: 1–2 Batch-Gerichte, die über mehrere Tage
+// portioniert werden, + Tageszuordnung (pro Trainingstag) + Einkaufsliste.
+// days: [{ date, label, macroTarget:{kcal,protein,carbs,fat} }]
+async function generatePrepPlan({ apiKey, inventory = [], days = [], mealTypes = [] }) {
+    if (!days.length) throw new Error('missing_days');
+    const invList = inventory.length
+        ? inventory.map((i) => `- ${i.name}: ${i.qty} ${i.unit}`).join('\n')
+        : '(Inventar leer)';
+    const dayList = days.map((d) =>
+        `- ${d.date} (${d.label}): pro Mahlzeit-Anteil je nach Mahlzeit, Tagesziel ${d.macroTarget?.kcal ?? '?'} kcal / P${d.macroTarget?.protein ?? '?'} K${d.macroTarget?.carbs ?? '?'} F${d.macroTarget?.fat ?? '?'}`
+    ).join('\n');
+    const meals = mealTypes.length ? mealTypes.join(', ') : 'Mittagessen, Abendessen';
+
+    const system = `Du bist Oles Ernährungs-Coach (Ausdauerathlet, 72kg, Marathon-Training).
+${DIET_PROFILE}
+Plane MEAL-PREP: Erstelle 1–2 Batch-Gerichte, die sich gut vorkochen, kühlen/portionieren lassen und über die Tage skalieren.
+Verteile die Portionen auf die genannten Tage und Mahlzeiten. Pro Trainingstag mehr Kohlenhydrate an harten/langen Tagen, weniger an Ruhetagen.
+Nutze vorrangig vorhandenes Inventar. Was fehlt, kommt in die Einkaufsliste — günstig und mengen-realistisch.
+Antworte deutsch, knapp und praktisch.`;
+
+    const userText = `INVENTAR:
+${invList}
+
+PREP FÜR DIESE TAGE:
+${dayList}
+
+ZU PREPPENDE MAHLZEITEN: ${meals}
+
+Gib NUR JSON zurück. Schema:
+{
+  "batches": [
+    {
+      "title": string,
+      "portions": number,
+      "ingredients": [ { "name": string, "qty": number, "unit": string, "inInventory": boolean } ],
+      "steps": [ string ],
+      "macrosPerPortion": { "kcal": number, "protein": number, "carbs": number, "fat": number }
+    }
+  ],
+  "schedule": [
+    { "date": "YYYY-MM-DD", "mealType": string, "batch": string, "portions": number, "macros": { "kcal": number, "protein": number, "carbs": number, "fat": number } }
+  ],
+  "shoppingList": [ { "name": string, "qty": number, "unit": string, "estPrice": number|null } ]
+}`;
+
+    const messages = [{ role: 'user', content: userText }];
+    const text = await callAnthropic({ apiKey, messages, maxTokens: 4000, system });
+    const p = extractJSON(text);
+    return {
+        batches: (Array.isArray(p.batches) ? p.batches : []).map((b) => ({
+            title: String(b.title || 'Gericht'),
+            portions: Number(b.portions) || 1,
+            ingredients: Array.isArray(b.ingredients) ? b.ingredients : [],
+            steps: Array.isArray(b.steps) ? b.steps : [],
+            macrosPerPortion: b.macrosPerPortion || { kcal: 0, protein: 0, carbs: 0, fat: 0 },
+        })),
+        schedule: (Array.isArray(p.schedule) ? p.schedule : []).map((s) => ({
+            date: String(s.date || ''),
+            mealType: String(s.mealType || 'Mahlzeit'),
+            batch: String(s.batch || ''),
+            portions: Number(s.portions) || 1,
+            macros: s.macros || { kcal: 0, protein: 0, carbs: 0, fat: 0 },
+        })),
+        shoppingList: (Array.isArray(p.shoppingList) ? p.shoppingList : []).map((i) => ({
+            name: String(i.name || ''),
+            qty: Number(i.qty) || 1,
+            unit: String(i.unit || 'Stk'),
+            estPrice: i.estPrice === null || i.estPrice === undefined ? null : Number(i.estPrice) || null,
+        })),
+    };
+}
+
 // Schätzt Makros einer gegessenen Mahlzeit aus freier Text-Beschreibung.
 // Ole tippt nur, WAS er gegessen hat — die KI schätzt kcal/Protein/Carbs/Fett.
 async function estimateMeal({ apiKey, description, mealType = '' }) {
@@ -205,4 +277,4 @@ Gib NUR JSON zurück. Schema:
     };
 }
 
-module.exports = { parseReceipt, generateRecipe, generateDayPlan, estimateMeal };
+module.exports = { parseReceipt, generateRecipe, generateDayPlan, estimateMeal, generatePrepPlan };

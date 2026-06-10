@@ -125,13 +125,29 @@ export function useKitchen() {
         }
     }, []);
 
+    // ── Meal-Prep ─────────────────────────────────────────────────────
+    const generatePrepPlan = useCallback(async (opts = {}) => {
+        const a = api(); if (!a) return null;
+        const apiKey = getKey();
+        if (!apiKey) { setError('Kein API-Key in Settings hinterlegt'); return null; }
+        setBusy(true); setError(null);
+        try {
+            return await a.prepGenerate({ apiKey, ...opts });
+        } catch (e) {
+            setError(String(e?.message || e));
+            return null;
+        } finally {
+            setBusy(false);
+        }
+    }, []);
+
     return {
         data, costs, busy, error,
         invAdd, invUpdate, invRemove, invConsume,
         mealAdd, mealUpdate, mealRemove, estimateMeal,
         importReceipt, confirmImport,
         generateRecipe, saveRecipe, updateRecipe, removeRecipe, applyConsumption,
-        updateMacroProfile, setMacroOverride, generateDayPlan,
+        updateMacroProfile, setMacroOverride, generateDayPlan, generatePrepPlan,
     };
 }
 

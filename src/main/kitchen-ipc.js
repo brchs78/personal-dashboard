@@ -77,6 +77,13 @@ function init(getWindow) {
         return ai.generateDayPlan({ apiKey, inventory, macroTarget, trainingLabel, alreadyEaten });
     });
 
+    // ── Meal-Prep ─────────────────────────────────────────────────────
+    ipcMain.handle('kitchen:prep-generate', async (_e, opts = {}) => {
+        const { apiKey, days, mealTypes } = opts;
+        const inventory = store.loadAll().inventory;
+        return ai.generatePrepPlan({ apiKey, inventory, days, mealTypes });
+    });
+
     // ── Makro-Profile & Overrides ─────────────────────────────────────
     ipcMain.handle('kitchen:macro-profile-update', (_e, { category, patch } = {}) =>
         emit(store.updateMacroProfile(category, patch))
