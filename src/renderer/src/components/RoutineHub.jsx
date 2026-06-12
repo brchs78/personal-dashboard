@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Sunrise, Moon, Clock, CheckCircle2, Pencil, Check, Plus, Trash2 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme.jsx";
 import { useRoutine, computeSchedule } from "../hooks/useRoutine.js";
+import RoutineBriefing from "./RoutineBriefing.jsx";
 
 const CATEGORY_OPTIONS = ["Routine", "Körper", "Ernährung", "Mentales", "Pflege", "Lernen"];
 
@@ -167,6 +168,11 @@ export default function RoutineHub() {
                     {editing ? "Fertig" : "Bearbeiten"}
                 </button>
             </div>
+
+            {/* ── Kontextuelles Briefing / Debrief (nicht im Edit-Modus) ── */}
+            {!editing && (
+                <RoutineBriefing variant={activeId} accent={accent} />
+            )}
 
             {!view ? (
                 <p style={{ color: tokens.colors.text.tertiary, fontSize: 13, padding: "0 12px" }}>

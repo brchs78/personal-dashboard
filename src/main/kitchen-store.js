@@ -6,6 +6,7 @@ const { app } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { todayISO, toLocalISO } = require('./utils/date.js');
 
 function kitchenPath() {
     return path.join(app.getPath('userData'), 'kitchen.json');
@@ -70,18 +71,20 @@ function loadAll() {
 }
 
 function saveAll(data) {
-    fs.writeFileSync(kitchenPath(), JSON.stringify(data, null, 2));
+    try {
+        fs.writeFileSync(kitchenPath(), JSON.stringify(data, null, 2));
+    } catch (e) {
+        console.warn('[kitchen-store] save failed:', e?.message);
+        throw new Error(`kitchen_save_failed: ${e?.message || e}`);
+    }
 }
 
+// Im Küchen-Kontext sind alle Zahlen (Mengen, Preise, Makros, Kosten) >= 0.
+// Negative Eingaben werden auf 0 geklemmt statt korrupte Daten zu speichern.
 function num(v, fallback = 0) {
     const n = Number(v);
-    return Number.isFinite(n) ? n : fallback;
-}
-
-function todayISO() {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 10);
+    if (!Number.isFinite(n)) return fallback;
+    return n < 0 ? 0 : n;
 }
 
 // ── Inventar ─────────────────────────────────────────────────────────
@@ -298,7 +301,7 @@ function mondayOf(dateStr) {
     const day = d.getDay();
     d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
     d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 10);
+    return toLocalISO(d);
 }
 
 function weeklyCostReport() {

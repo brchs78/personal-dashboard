@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useTodos } from '../hooks/useTodos';
 import { useTheme } from "../hooks/useTheme.jsx";
+import { todayISO, addDays as addDaysISO } from "../lib/date.js";
 
 function getCategories(tokens) {
     return [
@@ -43,17 +44,6 @@ const FILTERS = [
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
-
-function todayISO() {
-    const d = new Date(); d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 10);
-}
-
-function addDaysISO(base, days) {
-    const d = new Date(base);
-    d.setDate(d.getDate() + days);
-    return d.toISOString().slice(0, 10);
-}
 
 function bucketOf(item, today, weekEnd) {
     if (item.completedAt) return 'done';

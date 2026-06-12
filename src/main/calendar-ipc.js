@@ -41,7 +41,16 @@ function init(getWindow) {
     ipcMain.handle('calendar:list-subs', () => store.loadSubscriptions());
 
     ipcMain.handle('calendar:add-sub', async (_e, { label, url } = {}) => {
-        const sub = store.addSubscription({ label, url });
+        let parsed;
+        try {
+            parsed = new URL(String(url || '').trim());
+        } catch {
+            throw new Error('invalid_url');
+        }
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:' && parsed.protocol !== 'webcal:') {
+            throw new Error('invalid_url_protocol');
+        }
+        const sub = store.addSubscription({ label, url: parsed.href });
         // Sofort initialen Fetch antriggern
         try {
             await _sync.refreshOne(sub);

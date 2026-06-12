@@ -1,13 +1,23 @@
 // OLE OS — Strava-Sektion (im Health-Tab eingebettet)
 // Connect-Button + Activity-Liste der letzten 20 Runs.
 
-import { Link2, RefreshCw, Unlink, ExternalLink } from 'lucide-react';
+import { Link2, RefreshCw, Unlink, ExternalLink, AlertTriangle } from 'lucide-react';
 import { useStrava } from '../hooks/useStrava';
 import { useTheme } from "../hooks/useTheme.jsx";
+import { daysAgo } from "../lib/date.js";
+
+// Läufe älter als so viele Tage → Volumen-Basis nicht mehr aktuell.
+const STALE_RUN_DAYS = 7;
 
 export default function StravaSection() {
     const { tokens } = useTheme();
     const { status, activities, lastSync, busy, error, connect, disconnect, sync } = useStrava();
+
+    const newestRunISO = activities[0]?.start_date_local
+        ? String(activities[0].start_date_local).slice(0, 10)
+        : null;
+    const runAge = daysAgo(newestRunISO);
+    const runsStale = status.connected && runAge !== null && runAge > STALE_RUN_DAYS;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacing.md }}>
@@ -20,6 +30,7 @@ export default function StravaSection() {
                 onDisconnect={disconnect}
                 onSync={sync}
             />
+            {runsStale && <StaleRunsCard age={runAge} />}
             {error && <ErrorCard message={error} />}
             {status.connected && activities.length > 0 && <ActivityList items={activities} />}
             {status.connected && activities.length === 0 && !busy && <EmptyCard onSync={sync} />}
@@ -131,6 +142,26 @@ function ErrorCard({ message }) {
         <div style={{ ...tokens.glass.card, padding: tokens.spacing.md, borderColor: tokens.colors.status.danger }}>
             <p style={{ margin: 0, fontSize: tokens.typography.fontSize.sm, color: tokens.colors.status.danger }}>
                 {message}
+            </p>
+        </div>
+    );
+}
+
+function StaleRunsCard({ age }) {
+    const { tokens } = useTheme();
+    const warn = tokens.colors.status.warning || '#d97706';
+    return (
+        <div style={{
+            ...tokens.glass.card,
+            padding: tokens.spacing.md,
+            borderColor: warn,
+            display: 'flex',
+            alignItems: 'center',
+            gap: tokens.spacing.sm,
+        }}>
+            <AlertTriangle size={14} strokeWidth={2.5} color={warn} />
+            <p style={{ margin: 0, fontSize: tokens.typography.fontSize.sm, color: tokens.colors.text.secondary }}>
+                Letzter Lauf vor {age} Tagen — Volumen-Basis evtl. veraltet. „Sync" oder Lauf nachtragen.
             </p>
         </div>
     );

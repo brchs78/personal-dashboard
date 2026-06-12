@@ -4,9 +4,10 @@
 
 import { Flag } from "lucide-react";
 import { useTheme } from "../hooks/useTheme.jsx";
+import { MARATHON_DATE, MARATHON_LOCATION } from "../lib/constants.js";
 
-const DEFAULT_TARGET = "2026-10-11";
-const DEFAULT_LOCATION = "München";
+const DEFAULT_TARGET = MARATHON_DATE;
+const DEFAULT_LOCATION = MARATHON_LOCATION;
 
 // Tage bis Ziel-Datum (ISO yyyy-mm-dd), 0 wenn vergangen.
 function daysUntil(iso) {

@@ -18,6 +18,9 @@ const vaultExportIPC = require('./vault-export-ipc.js')
 const vaultExport = require('./vault-export.js')
 const routineIPC = require('./routine-ipc.js')
 const kitchenIPC = require('./kitchen-ipc.js')
+const debriefIPC = require('./debrief-ipc.js')
+const trainingLogIPC = require('./training-log-ipc.js')
+const { MARATHON_DATE } = require('./constants.js')
 
 let mainWindow = null
 let tray = null
@@ -87,7 +90,7 @@ function createTray() {
 
 function updateTrayTitle() {
     if (!tray || tray.isDestroyed()) return
-    const days = Math.max(0, Math.round((new Date('2026-10-11') - new Date()) / 86400000))
+    const days = Math.max(0, Math.round((new Date(MARATHON_DATE) - new Date()) / 86400000))
     tray.setTitle(`  🏃 ${days}d`)
 }
 
@@ -160,6 +163,8 @@ app.whenReady().then(() => {
     vaultExportIPC.init(() => mainWindow, vaultDeps)
     routineIPC.init(() => mainWindow)
     kitchenIPC.init(() => mainWindow)
+    debriefIPC.init(() => mainWindow)
+    trainingLogIPC.init(() => mainWindow)
     app.on('activate', () => showWindow())
 })
 app.on('will-quit', () => globalShortcut.unregisterAll())

@@ -114,6 +114,17 @@ contextBridge.exposeInMainWorld('oleAPI', {
         prepGenerate:    (opts) => ipcRenderer.invoke('kitchen:prep-generate', opts),
         onUpdated:       (cb) => on('kitchen:updated', cb),
     },
+    debrief: {
+        get:       (date) => ipcRenderer.invoke('debrief:get', date),
+        set:       (date, patch) => ipcRenderer.invoke('debrief:set', { date, patch }),
+        onUpdated: (cb) => on('debrief:updated', cb),
+    },
+    trainingLog: {
+        get:           (date) => ipcRenderer.invoke('traininglog:get', date),
+        set:           (date, patch) => ipcRenderer.invoke('traininglog:set', { date, patch }),
+        recentNiggles: (days) => ipcRenderer.invoke('traininglog:recent-niggles', days),
+        onUpdated:     (cb) => on('traininglog:updated', cb),
+    },
     calendar: {
         list:           () => ipcRenderer.invoke('calendar:list'),
         refreshNow:     () => ipcRenderer.invoke('calendar:refresh-now'),

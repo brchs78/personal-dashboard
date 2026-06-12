@@ -3,10 +3,7 @@ import { useState, useCallback } from "react";
 import { Plus, Flame, Trash2, Check, Pencil } from "lucide-react";
 import { useTheme } from "../hooks/useTheme.jsx";
 import { useHabits } from "../hooks/useHabits.js";
-
-function todayISO() {
-    return new Date().toISOString().slice(0, 10);
-}
+import { todayISO } from "../lib/date.js";
 
 // Build last 21 dates ending today
 function last21Days() {

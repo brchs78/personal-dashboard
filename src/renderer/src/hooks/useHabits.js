@@ -1,9 +1,6 @@
 // OLE OS — useHabits Hook
 import { useCallback, useEffect, useState } from "react";
-
-function todayISO() {
-    return new Date().toISOString().slice(0, 10);
-}
+import { todayISO } from "../lib/date.js";
 
 export function useHabits() {
     const [habits, setHabits] = useState([]);

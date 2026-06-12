@@ -2,8 +2,8 @@
 // Anthropic-Calls: Kassenbon-PDF parsen + Rezeptvorschlag generieren.
 // Main-seitig (wie coach-plan.js), API-Key kommt aus dem Renderer.
 
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-5';
+const { ANTHROPIC_URL, ANTHROPIC_VERSION, MODEL } = require('./constants.js');
+const { fetchWithRetry } = require('./utils/anthropic-fetch.js');
 
 // Festes Ernährungsprofil — gilt für ALLE Rezept-/Tagesplan-Vorschläge.
 const DIET_PROFILE = `ERNÄHRUNGS-PROFIL (IMMER strikt beachten):
@@ -32,12 +32,12 @@ function extractJSON(text) {
 
 async function callAnthropic({ apiKey, messages, maxTokens = 2000, system }) {
     if (!apiKey) throw new Error('missing_api_key');
-    const r = await fetch(ANTHROPIC_URL, {
+    const r = await fetchWithRetry(ANTHROPIC_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
+            'anthropic-version': ANTHROPIC_VERSION,
         },
         body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages }),
     });

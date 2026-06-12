@@ -9,6 +9,7 @@ const habitStore = require('./habit-store.js');
 const stravaClient = require('./strava-client.js');
 const stravaStore = require('./strava-store.js');
 const corosStore = require('./coros-store.js');
+const { todayISO, endOfWeekISO } = require('./utils/date.js');
 
 const TOOLS = [
     {
@@ -192,19 +193,6 @@ const TOOLS = [
         },
     },
 ];
-
-function todayISO() {
-    return new Date().toISOString().slice(0, 10);
-}
-
-function endOfWeekISO() {
-    const d = new Date();
-    const day = d.getDay(); // 0=So .. 6=Sa
-    const diff = day === 0 ? 0 : 7 - day; // bis nächsten Sonntag
-    d.setDate(d.getDate() + diff);
-    d.setHours(0, 0, 0, 0);
-    return d.toISOString().slice(0, 10);
-}
 
 function filterTodos(items, { include_done = false, filter = 'all' } = {}) {
     const today = todayISO();

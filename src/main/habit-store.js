@@ -5,6 +5,7 @@ const { app } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { todayISO } = require('./utils/date.js');
 
 function habitsPath() {
     return path.join(app.getPath('userData'), 'habits.json');
@@ -31,10 +32,6 @@ function loadRaw() {
 
 function saveRaw(data) {
     fs.writeFileSync(habitsPath(), JSON.stringify(data, null, 2));
-}
-
-function todayISO() {
-    return new Date().toISOString().slice(0, 10);
 }
 
 // Returns { habits, checkins }

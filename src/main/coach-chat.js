@@ -5,14 +5,10 @@
 const { TOOLS, dispatch } = require('./coach-chat-tools.js');
 const stravaStore = require('./strava-store.js');
 
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-5';
+const { ANTHROPIC_URL, ANTHROPIC_VERSION, MODEL } = require('./constants.js');
+const { todayISO } = require('./utils/date.js');
 const MAX_LOOP = 8;
 const MAX_TOKENS = 1500;
-
-function todayISO() {
-    return new Date().toISOString().slice(0, 10);
-}
 
 const BASE_PROFILE = `Du bist Oles persönlicher KI-Sportcoach und Life-Optimierer.
 IDENTITÄT: Ole, VWL-Student 2. Semester, LMU München. 193cm, 72kg.
@@ -41,7 +37,7 @@ async function streamAnthropic({ apiKey, messages, onEvent }) {
         headers: {
             'Content-Type': 'application/json',
             'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
+            'anthropic-version': ANTHROPIC_VERSION,
             'accept': 'text/event-stream',
         },
         body: JSON.stringify({

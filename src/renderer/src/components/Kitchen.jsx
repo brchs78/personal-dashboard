@@ -12,11 +12,7 @@ import {
 import { useKitchen, categoryForType } from '../hooks/useKitchen';
 import { useTrainingPlan } from '../hooks/useTrainingPlan';
 import { useTheme } from '../hooks/useTheme.jsx';
-
-function todayISO() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
+import { todayISO, addDays } from '../lib/date.js';
 
 function eur(n) {
     if (n === null || n === undefined || n === '') return '—';
@@ -1015,11 +1011,6 @@ function ProfileRow({ cat, profile, acc, onCommit }) {
 // ─────────────────────────────────────────────────────────────
 // Shared helpers + small components
 // ─────────────────────────────────────────────────────────────
-function addDays(iso, n) {
-    const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n);
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
 function scaleMacro(m, s) {
     return { kcal: Math.round((m.kcal || 0) * s), protein: Math.round((m.protein || 0) * s), carbs: Math.round((m.carbs || 0) * s), fat: Math.round((m.fat || 0) * s) };
 }

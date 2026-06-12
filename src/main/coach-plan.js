@@ -1,12 +1,16 @@
 // OLE OS — KI-Trainingsplan-Generator
 // Sammelt Health-Snapshot + Strava-History, baut Prompt, ruft Anthropic API.
 
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-5';
-
-const MARATHON_DATE = '2026-10-11';
-const TARGET_TIME = '3:10';
-const TARGET_PACE = '4:30/km';
+const {
+    ANTHROPIC_URL,
+    ANTHROPIC_VERSION,
+    MODEL,
+    MARATHON_DATE,
+    TARGET_TIME,
+    TARGET_PACE,
+} = require('./constants.js');
+const { toLocalISO, daysAgo } = require('./utils/date.js');
+const { fetchWithRetry } = require('./utils/anthropic-fetch.js');
 
 // Wochen-Struktur abhängig von der konfigurierten Hockey-Anzahl (Saisonende →
 // weniger Hockey → mehr Lauftage). hockeyPerWeek default 2.
@@ -71,13 +75,6 @@ const HEALTH_CONSTRAINTS = `GESUNDHEIT: Keine akuten Einschränkungen — volle 
 - Steuerung rein über Recovery-Status (HRV/Schlaf/RHR) unten: niedrige HRV oder schlechter Schlaf → Quality zu Easy downgraden.
 - Bei Krankheits-/Erschöpfungssymptomen sofort Intensität senken.`;
 
-// Alter eines ISO-Datums in Tagen (lokal). null wenn kein Datum.
-function daysAgo(dateStr) {
-    if (!dateStr) return null;
-    const d = new Date(dateStr); d.setHours(0, 0, 0, 0);
-    const t = new Date(); t.setHours(0, 0, 0, 0);
-    return Math.round((t - d) / 86400000);
-}
 
 function ageTag(dateStr) {
     const a = daysAgo(dateStr);
@@ -254,12 +251,12 @@ ANTWORTE NUR ALS VALIDES JSON (keine Code-Fences, kein Text drumherum) NACH DIES
 }
 
 async function callAnthropic({ apiKey, prompt, maxTokens = 4000 }) {
-    const r = await fetch(ANTHROPIC_URL, {
+    const r = await fetchWithRetry(ANTHROPIC_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
+            'anthropic-version': ANTHROPIC_VERSION,
         },
         body: JSON.stringify({
             model: MODEL,
@@ -284,15 +281,6 @@ function extractJson(text) {
     const last = trimmed.lastIndexOf('}');
     if (first >= 0 && last > first) return JSON.parse(trimmed.slice(first, last + 1));
     throw new Error('no_json_in_response');
-}
-
-// Lokales Datum als YYYY-MM-DD — NICHT toISOString (das wäre UTC und kippt
-// in DE-Zeitzone die lokale Mitternacht auf den Vortag).
-function toLocalISO(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
 }
 
 // Montag (lokal, 00:00) der Woche, in der `date` liegt.

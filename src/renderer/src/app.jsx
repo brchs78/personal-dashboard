@@ -9,6 +9,7 @@ import HabitHub from "./components/HabitHub";
 import RoutineHub from "./components/RoutineHub";
 import Kitchen from "./components/Kitchen";
 import { useTheme } from "./hooks/useTheme.jsx";
+import { ANTHROPIC_URL, ANTHROPIC_VERSION, MODEL, MARATHON_DATE } from "./lib/constants.js";
 
 // ── Speicher-Adapter: nutzt window.storage (Claude) oder localStorage (Electron) ──
 const store = (typeof window !== "undefined" && window.storage) ? window.storage : {
@@ -83,12 +84,12 @@ async function callAI(messages, maxTok = 800) {
     const headers = { "Content-Type": "application/json" };
     if (key) {
         headers["x-api-key"] = key;
-        headers["anthropic-version"] = "2023-06-01";
+        headers["anthropic-version"] = ANTHROPIC_VERSION;
         headers["anthropic-dangerous-direct-browser-access"] = "true";
     }
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    const r = await fetch(ANTHROPIC_URL, {
         method: "POST", headers,
-        body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: maxTok, system: PROFILE, messages }),
+        body: JSON.stringify({ model: MODEL, max_tokens: maxTok, system: PROFILE, messages }),
     });
     const d = await r.json();
     return d.content.filter(b => b.type === "text").map(b => b.text).join("");
@@ -347,7 +348,7 @@ export default function App() {
     }
 
     const today = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
-    const dLeft = dTo("2026-10-11"), wLeft = Math.floor(dLeft / 7);
+    const dLeft = dTo(MARATHON_DATE), wLeft = Math.floor(dLeft / 7);
     const weekDts = getWeekDates();
     const tdKey = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][new Date().getDay()];
     const tEcts = grades.reduce((s, g) => s + parseInt(g.ects || 0), 0);

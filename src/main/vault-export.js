@@ -6,6 +6,7 @@
 const { app } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const { todayISO } = require('./utils/date.js');
 
 // ── Settings ─────────────────────────────────────────────────────────────
 
@@ -46,10 +47,6 @@ const FOLDERS = {
 
 const BEGIN_MARKER = '<!-- BEGIN auto -->';
 const END_MARKER = '<!-- END auto -->';
-
-function todayISO() {
-    return new Date().toISOString().slice(0, 10);
-}
 
 function ensureVault(vaultPath) {
     if (!vaultPath) throw new Error('vault_path_not_set');

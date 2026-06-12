@@ -7,6 +7,10 @@ import { Moon, Heart, Activity, Shield, Wind, Flame, RefreshCw, Link2, Unlink } 
 import { useCorosSummary, useCorosTrend } from '../hooks/useCoros';
 import StravaSection from './StravaSection';
 import { useTheme } from "../hooks/useTheme.jsx";
+import { daysAgo } from "../lib/date.js";
+
+// Recovery-Werte älter als so viele Tage gelten als nicht mehr aussagekräftig.
+const STALE_DAYS = 3;
 
 export default function Health() {
     const { tokens } = useTheme();
@@ -201,6 +205,8 @@ function HeroGrid({ latest }) {
 
 function HeroTile({ icon: Icon, label, value, unit, sub }) {
     const { tokens } = useTheme();
+    const age = daysAgo(sub);
+    const stale = age !== null && age > STALE_DAYS;
     return (
         <div
             style={{
@@ -209,6 +215,7 @@ function HeroTile({ icon: Icon, label, value, unit, sub }) {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: tokens.spacing.sm,
+                opacity: stale ? 0.6 : 1,
             }}
         >
             <div
@@ -243,6 +250,24 @@ function HeroTile({ icon: Icon, label, value, unit, sub }) {
                 >
                     {label}
                 </span>
+                {stale && (
+                    <span
+                        title={`Zuletzt vor ${age} Tagen gemessen`}
+                        style={{
+                            marginLeft: 'auto',
+                            fontSize: 9,
+                            fontWeight: tokens.typography.fontWeight.bold,
+                            color: tokens.colors.status.warning || '#d97706',
+                            border: `1px solid ${tokens.colors.status.warning || '#d97706'}`,
+                            borderRadius: tokens.radius.full,
+                            padding: '1px 6px',
+                            textTransform: 'uppercase',
+                            letterSpacing: tokens.typography.letterSpacing.wide,
+                        }}
+                    >
+                        Veraltet
+                    </span>
+                )}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: tokens.spacing.xs }}>
                 <span
